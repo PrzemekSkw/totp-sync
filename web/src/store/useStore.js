@@ -56,14 +56,15 @@ const useStore = create((set, get) => ({
     }
   },
 
-  register: async (email, password, totpCode) => {
+  register: async (email, password, totpCode, pendingData) => {
     try {
       // Jeśli totpCode przekazany - weryfikuj 2FA
       if (totpCode) {
         const response = await api.post('/auth/register/verify-2fa', {
           email,
           password,
-          token: totpCode
+          token: totpCode,
+          pendingData
         });
         
         const { token, user } = response.data;

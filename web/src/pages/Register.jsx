@@ -16,6 +16,7 @@ export default function Register() {
     password: '',
     confirmPassword: '',
     totpCode: '',
+    pendingData: null,
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});

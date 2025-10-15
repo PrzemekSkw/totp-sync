@@ -51,25 +51,11 @@ router.post('/register', registerValidation, async (req, res) => {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
-    // Hash hasła
-    const passwordHash = await hashPassword(password);
-
     // ✅ Jeśli 2FA wymagane przy rejestracji
     if (REQUIRE_2FA_ON_REGISTER) {
-      // Generuj TOTP secret
+      // Generuj TOTP secret (ale NIE twórz konta jeszcze!)
       const secret = authenticator.generateSecret();
-      const encryptedSecret = encryptSecret(secret);
-      
-      // Generuj backup kody
       const backupCodes = generateBackupCodes();
-
-      // Utwórz użytkownika z secretem (ale 2FA jeszcze nie włączone)
-      const result = await db.query(
-        'INSERT INTO users (email, password_hash, totp_secret_encrypted, backup_codes, totp_enabled) VALUES ($1, $2, $3, $4, FALSE) RETURNING id, email, created_at',
-        [email, passwordHash, encryptedSecret, backupCodes]
-      );
-
-      const user = result.rows[0];
 
       // Generuj otpauth URL dla QR kodu
       const otpauthUrl = authenticator.keyuri(
@@ -78,23 +64,31 @@ router.post('/register', registerValidation, async (req, res) => {
         secret
       );
 
-      // ❌ NIE daj tokena - użytkownik musi najpierw włączyć 2FA
-      res.status(201).json({
-        message: 'User registered. Please setup 2FA to continue.',
+      // Zaszyfruj hasło i secret
+      const passwordHash = await hashPassword(password);
+      const encryptedSecret = encryptSecret(secret);
+
+      // ❌ NIE zapisuj w bazie - tylko wyślij dane do frontendu
+      res.status(200).json({
+        message: 'Please setup 2FA to complete registration',
         requires2FA: true,
-        user: {
-          id: user.id,
-          email: user.email,
-          createdAt: user.created_at
-        },
         twoFactor: {
           secret,
           otpauthUrl,
+          backupCodes
+        },
+        // Dane do przekazania przy weryfikacji
+        pendingRegistration: {
+          email,
+          passwordHash,
+          encryptedSecret,
           backupCodes
         }
       });
     } else {
       // ✅ Standardowa rejestracja bez 2FA
+      const passwordHash = await hashPassword(password);
+
       const result = await db.query(
         'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email, created_at',
         [email, passwordHash]
@@ -119,67 +113,60 @@ router.post('/register', registerValidation, async (req, res) => {
   }
 });
 
-// ✅ NOWY ENDPOINT: Aktywuj 2FA podczas rejestracji
+// ✅ Dokończ rejestrację po weryfikacji 2FA
 router.post('/register/verify-2fa', [
   body('email').isEmail().normalizeEmail(),
   body('password').notEmpty(),
-  body('token').isLength({ min: 6, max: 6 })
+  body('token').isLength({ min: 6, max: 6 }),
+  body('pendingData').notEmpty()
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { email, password, token } = req.body;
+  const { email, password, token, pendingData } = req.body;
 
   try {
-    // Znajdź użytkownika
-    const result = await db.query(
-      'SELECT id, email, password_hash, totp_secret_encrypted, totp_enabled FROM users WHERE email = $1',
+    // Sprawdź czy użytkownik już nie istnieje (double check)
+    const existingUser = await db.query(
+      'SELECT id FROM users WHERE email = $1',
       [email]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
+    if (existingUser.rows.length > 0) {
+      return res.status(400).json({ error: 'Email already registered' });
     }
 
-    const user = result.rows[0];
-
-    // Weryfikuj hasło
-    const isPasswordValid = await verifyPassword(password, user.password_hash);
+    // Weryfikuj hasło (upewnij się że to ten sam użytkownik)
+    const isPasswordValid = await verifyPassword(password, pendingData.passwordHash);
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Sprawdź czy 2FA już włączone
-    if (user.totp_enabled) {
-      return res.status(400).json({ error: '2FA already enabled' });
-    }
+    // Deszyfruj secret
+    const secret = decryptSecret(pendingData.encryptedSecret);
 
-    // Sprawdź czy ma secret
-    if (!user.totp_secret_encrypted) {
-      return res.status(400).json({ error: 'No 2FA setup found' });
-    }
-
-    // Deszyfruj secret i weryfikuj token
-    const secret = decryptSecret(user.totp_secret_encrypted);
+    // Weryfikuj token 2FA
     const isTokenValid = authenticator.verify({ token, secret });
 
     if (!isTokenValid) {
-      return res.status(400).json({ error: 'Invalid 2FA code' });
+      return res.status(400).json({ error: 'Invalid 2FA code. Please try again.' });
     }
 
-    // ✅ Włącz 2FA
-    await db.query(
-      'UPDATE users SET totp_enabled = TRUE WHERE id = $1',
-      [user.id]
+    // ✅ Token poprawny - TERAZ utwórz konto
+    const result = await db.query(
+      'INSERT INTO users (email, password_hash, totp_secret_encrypted, backup_codes, totp_enabled) VALUES ($1, $2, $3, $4, TRUE) RETURNING id, email, created_at',
+      [email, pendingData.passwordHash, pendingData.encryptedSecret, pendingData.backupCodes]
     );
 
-    // ✅ Teraz daj token JWT
+    const user = result.rows[0];
+
+    // ✅ Daj token JWT
     const jwtToken = generateToken(user.id, user.email);
 
     res.json({
-      message: '2FA enabled successfully',
+      message: 'Registration completed successfully',
       token: jwtToken,
       user: {
         id: user.id,
@@ -189,7 +176,7 @@ router.post('/register/verify-2fa', [
     });
   } catch (error) {
     console.error('2FA verification error:', error);
-    res.status(500).json({ error: 'Failed to verify 2FA' });
+    res.status(500).json({ error: 'Failed to complete registration' });
   }
 });
 
@@ -271,7 +258,7 @@ router.post('/login', loginValidation, async (req, res) => {
 // Odświeżanie tokena
 router.post('/refresh', refreshToken);
 
-// Weryfikacja tokena (sprawdź czy użytkownik jest zalogowany)
+// Weryfikacja tokena
 router.get('/verify', authenticateToken, async (req, res) => {
   try {
     const result = await db.query(
@@ -309,7 +296,6 @@ router.post('/change-password', authenticateToken, [
   const { currentPassword, newPassword } = req.body;
 
   try {
-    // Pobierz obecne hasło
     const result = await db.query(
       'SELECT password_hash FROM users WHERE id = $1',
       [req.user.userId]
@@ -319,16 +305,13 @@ router.post('/change-password', authenticateToken, [
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Weryfikuj obecne hasło
     const isValid = await verifyPassword(currentPassword, result.rows[0].password_hash);
     if (!isValid) {
       return res.status(401).json({ error: 'Current password is incorrect' });
     }
 
-    // Hash nowego hasła
     const newPasswordHash = await hashPassword(newPassword);
 
-    // Aktualizuj hasło
     await db.query(
       'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
       [newPasswordHash, req.user.userId]
@@ -341,12 +324,9 @@ router.post('/change-password', authenticateToken, [
   }
 });
 
-// ==================== 2FA ENDPOINTS ====================
-
-// Setup 2FA - generuj secret i backup kody
+// Setup 2FA
 router.post('/2fa/setup', authenticateToken, async (req, res) => {
   try {
-    // Sprawdź czy 2FA już włączone
     const result = await db.query(
       'SELECT totp_enabled FROM users WHERE id = $1',
       [req.user.userId]
@@ -356,20 +336,15 @@ router.post('/2fa/setup', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: '2FA is already enabled' });
     }
 
-    // Generuj secret TOTP
     const secret = authenticator.generateSecret();
     const encryptedSecret = encryptSecret(secret);
-
-    // Generuj backup kody
     const backupCodes = generateBackupCodes();
 
-    // Zapisz w bazie (ale jeszcze nie włączaj)
     await db.query(
       'UPDATE users SET totp_secret_encrypted = $1, backup_codes = $2 WHERE id = $3',
       [encryptedSecret, backupCodes, req.user.userId]
     );
 
-    // Generuj otpauth URL dla QR kodu
     const otpauthUrl = authenticator.keyuri(
       req.user.email,
       'TOTP Sync',
@@ -387,7 +362,7 @@ router.post('/2fa/setup', authenticateToken, async (req, res) => {
   }
 });
 
-// Włącz 2FA - weryfikuj kod
+// Włącz 2FA
 router.post('/2fa/enable', authenticateToken, [
   body('token').notEmpty().isLength({ min: 6, max: 6 })
 ], async (req, res) => {
@@ -399,7 +374,6 @@ router.post('/2fa/enable', authenticateToken, [
   const { token } = req.body;
 
   try {
-    // Pobierz secret
     const result = await db.query(
       'SELECT totp_secret_encrypted, totp_enabled FROM users WHERE id = $1',
       [req.user.userId]
@@ -417,17 +391,13 @@ router.post('/2fa/enable', authenticateToken, [
       return res.status(400).json({ error: 'Please setup 2FA first' });
     }
 
-    // Deszyfruj secret
     const secret = decryptSecret(result.rows[0].totp_secret_encrypted);
-
-    // Weryfikuj token
     const isValid = authenticator.verify({ token, secret });
 
     if (!isValid) {
       return res.status(400).json({ error: 'Invalid 2FA code' });
     }
 
-    // Włącz 2FA
     await db.query(
       'UPDATE users SET totp_enabled = TRUE WHERE id = $1',
       [req.user.userId]
@@ -453,7 +423,6 @@ router.post('/2fa/disable', authenticateToken, [
   const { password, token } = req.body;
 
   try {
-    // Pobierz dane użytkownika
     const result = await db.query(
       'SELECT password_hash, totp_secret_encrypted, totp_enabled FROM users WHERE id = $1',
       [req.user.userId]
@@ -469,13 +438,11 @@ router.post('/2fa/disable', authenticateToken, [
       return res.status(400).json({ error: '2FA is not enabled' });
     }
 
-    // Weryfikuj hasło
     const isPasswordValid = await verifyPassword(password, user.password_hash);
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid password' });
     }
 
-    // Weryfikuj token 2FA
     const secret = decryptSecret(user.totp_secret_encrypted);
     const isTokenValid = authenticator.verify({ token, secret });
 
@@ -483,7 +450,6 @@ router.post('/2fa/disable', authenticateToken, [
       return res.status(400).json({ error: 'Invalid 2FA code' });
     }
 
-    // Wyłącz 2FA
     await db.query(
       'UPDATE users SET totp_enabled = FALSE, totp_secret_encrypted = NULL, backup_codes = NULL WHERE id = $1',
       [req.user.userId]
