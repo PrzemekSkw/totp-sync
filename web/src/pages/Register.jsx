@@ -133,8 +133,8 @@ export default function Register() {
         <div className="max-w-lg w-full">
           <div className="card">
             <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-2xl mb-4">
-                <Shield className="w-8 h-8 text-white" />
+              <div className="inline-flex items-center justify-center w-20 h-20 mb-4">
+               <img src="/logo.png" alt="TOTP Sync" className="w-full h-full rounded-2xl" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                 Setup Two-Factor Authentication
@@ -229,8 +229,8 @@ export default function Register() {
       <div className="max-w-md w-full">
         {/* Logo/Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-2xl mb-4">
-            <Shield className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-20 h-20 mb-4">
+            <img src="/logo.png" alt="TOTP Sync" className="w-full h-full rounded-2xl" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             TOTP Sync

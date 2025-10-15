@@ -1,6 +1,37 @@
-# TOTP Sync
+<p align="center">
+  <img src="assets/logo.png" alt="TOTP Sync Logo" width="150">
+</p>
 
-Self-hosted two-factor authentication (2FA) app with web interface and cross-device synchronization.
+<h1 align="center">TOTP Sync</h1>
+
+<p align="center">
+  Self-hosted two-factor authentication (2FA) app with web interface and cross-device synchronization.
+</p>
+
+<p align="center">
+  <a href="https://github.com/PrzemekSkw/totp-sync/stargazers">
+    <img src="https://img.shields.io/github/stars/PrzemekSkw/totp-sync?style=social" alt="GitHub stars">
+  </a>
+  <a href="https://github.com/PrzemekSkw/totp-sync/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License">
+  </a>
+</p>
+
+---
+
+## 📸 Screenshots
+
+<p align="center">
+  <img src="screenshots/dashboard.png" alt="Dashboard with TOTP codes" width="45%">
+  <img src="screenshots/dark-mode.png" alt="Dark mode support" width="45%">
+</p>
+
+<p align="center">
+  <img src="screenshots/login.png" alt="Login page" width="45%">
+  <img src="screenshots/2fa-setup.png" alt="2FA Setup with QR code" width="45%">
+</p>
+
+---
 
 ## ✨ Features
 
@@ -13,6 +44,7 @@ Self-hosted two-factor authentication (2FA) app with web interface and cross-dev
 - 📋 Import/Export (JSON, otpauth URI)
 - 🛡️ Mandatory 2FA on registration (configurable)
 - 💾 Backup codes for account recovery
+
 
 ## 🚀 Quick Start
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Shield } from 'lucide-react';
+import { Mail, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useStore from '../store/useStore';
 import Button from '../components/Button';
@@ -101,8 +101,8 @@ export default function Login() {
       <div className="max-w-md w-full">
         {/* Logo/Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-2xl mb-4">
-            <Shield className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-20 h-20 mb-4">
+            <img src="/logo.png" alt="TOTP Sync" className="w-full h-full drop-shadow-lg rounded-2xl" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             TOTP Sync

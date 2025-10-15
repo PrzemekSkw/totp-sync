@@ -107,8 +107,8 @@ export default function TwoFactorSetup({ onClose, onSuccess }) {
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center gap-3 p-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="p-2 bg-primary-100 dark:bg-primary-900 rounded-lg">
-            <Shield className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+          <div className="inline-flex items-center justify-center w-20 h-20 mb-4">
+            <img src="/logo.png" alt="TOTP Sync" className="w-full h-full rounded-2xl" />
           </div>
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">
             Setup Two-Factor Authentication

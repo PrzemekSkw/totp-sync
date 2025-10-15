@@ -34,8 +34,8 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 bg-primary-600 rounded-lg">
-              <Shield className="w-6 h-6 text-white" />
+            <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900 dark:to-primary-800 rounded-xl p-2">
+              <img src="/logo.png" alt="TOTP Sync" className="w-full h-full" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">
