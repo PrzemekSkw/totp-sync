@@ -133,8 +133,8 @@ export default function Register() {
         <div className="max-w-lg w-full">
           <div className="card">
             <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-20 h-20 mb-4">
-               <img src="/logo.png" alt="TOTP Sync" className="w-full h-full rounded-2xl" />
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-2xl mb-4">
+                <Shield className="w-8 h-8 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                 Setup Two-Factor Authentication
@@ -145,10 +145,37 @@ export default function Register() {
             </div>
 
             {/* QR Code */}
-            <div className="bg-white dark:bg-gray-700 p-6 rounded-xl mb-6 flex justify-center">
-              {qrCodeUrl && (
-                <img src={qrCodeUrl} alt="QR Code" className="w-64 h-64" />
-              )}
+            <div className="bg-white dark:bg-gray-700 p-6 rounded-xl mb-6">
+              <div className="flex justify-center mb-4">
+                {qrCodeUrl && (
+                  <img src={qrCodeUrl} alt="QR Code" className="w-64 h-64" />
+                )}
+              </div>
+              
+              {/* Manual Entry Option */}
+              <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 text-center">
+                  Can't scan? Enter manually:
+                </p>
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 font-mono text-sm break-all text-center">
+                  {backupCodes.length > 0 && formData.email ? 
+                    `otpauth://totp/TOTP%20Sync:${formData.email}?secret=${backupCodes[0]}&issuer=TOTP%20Sync`.match(/secret=([^&]+)/)?.[1] || 'Loading...'
+                    : 'Loading...'}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const secret = `otpauth://totp/TOTP%20Sync:${formData.email}?secret=${backupCodes[0]}&issuer=TOTP%20Sync`.match(/secret=([^&]+)/)?.[1];
+                    if (secret) {
+                      navigator.clipboard.writeText(secret);
+                      toast.success('Secret copied!');
+                    }
+                  }}
+                  className="mt-2 w-full text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400"
+                >
+                  📋 Copy Secret
+                </button>
+              </div>
             </div>
 
             {/* Backup Codes */}
@@ -229,8 +256,8 @@ export default function Register() {
       <div className="max-w-md w-full">
         {/* Logo/Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 mb-4">
-            <img src="/logo.png" alt="TOTP Sync" className="w-full h-full rounded-2xl" />
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-2xl mb-4">
+            <Shield className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             TOTP Sync
