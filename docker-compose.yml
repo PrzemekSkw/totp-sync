@@ -1,0 +1,63 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: totp-sync-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: totp_sync
+      POSTGRES_USER: totp_user
+      POSTGRES_PASSWORD: CHANGE_ME_STRONG_PASSWORD
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - totp-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U totp_user -d totp_sync"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build: ./backend
+    container_name: totp-sync-backend
+    restart: unless-stopped
+    environment:
+      REQUIRE_2FA_ON_REGISTER: true
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://totp_user:<YOUR_POSTGRES_PASSWORD>@postgres:5432/totp_sync
+      JWT_SECRET: "CHANGE_ME" #generate with command: 'openssl rand -base64 32'
+      ENCRYPTION_KEY: "CHANGE_ME" #generate with command: 'openssl rand -hex 16'
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - totp-network
+    volumes:
+      - ./backend/src:/app/src
+
+  # Web Frontend
+  web:
+    build: ./web
+    container_name: totp-sync-web
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: http://localhost:3000/api
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - totp-network
+
+networks:
+  totp-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
