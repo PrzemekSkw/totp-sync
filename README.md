@@ -18,12 +18,6 @@
 </p>
 
 
-<p align="center">
-  <img src="assets/logo.png" alt="TOTP Sync Logo" width="150">
-</p>
-
-<h1 align="center">TOTP Sync</h1>
-
 > **⚠️ WORK IN PROGRESS - ALPHA VERSION**
 > 
 > This project is in early development stage. Current known issues:
@@ -36,10 +30,6 @@
 <p align="center">
   <img src="https://img.shields.io/badge/status-alpha-red?style=for-the-badge" alt="Alpha Status">
   <img src="https://img.shields.io/badge/version-0.1.0--alpha-orange?style=for-the-badge" alt="Version">
-</p>
-
-<p align="center">
-  Self-hosted two-factor authentication (2FA) app with web interface and cross-device synchronization.
 </p>
 
 ---
