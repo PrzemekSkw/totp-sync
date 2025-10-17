@@ -17,6 +17,31 @@
   </a>
 </p>
 
+
+<p align="center">
+  <img src="assets/logo.png" alt="TOTP Sync Logo" width="150">
+</p>
+
+<h1 align="center">TOTP Sync</h1>
+
+> **⚠️ WORK IN PROGRESS - ALPHA VERSION**
+> 
+> This project is in early development stage. Current known issues:
+> - 2FA login functionality is not working correctly
+> - Do NOT enable 2FA in Settings unless you're testing
+> - Expect bugs and breaking changes
+> 
+> **Use at your own risk!**
+
+<p align="center">
+  <img src="https://img.shields.io/badge/status-alpha-red?style=for-the-badge" alt="Alpha Status">
+  <img src="https://img.shields.io/badge/version-0.1.0--alpha-orange?style=for-the-badge" alt="Version">
+</p>
+
+<p align="center">
+  Self-hosted two-factor authentication (2FA) app with web interface and cross-device synchronization.
+</p>
+
 ---
 
 ## 📸 Screenshots
@@ -61,7 +86,12 @@ git clone https://github.com/PrzemekSkw/totp-sync.git
 cd totp-sync
 ```
 
-2. **Generate secure secrets:**
+2. **Create environment file:**
+```bash
+cp .env.example .env
+```
+
+3. **Generate secure secrets:**
 ```bash
 # JWT Secret (copy the output)
 openssl rand -base64 32
@@ -70,32 +100,49 @@ openssl rand -base64 32
 openssl rand -hex 16
 ```
 
-3. **Configure docker-compose.yml:**
-
-Edit `docker-compose.yml` and replace the following placeholders:
-
-- `POSTGRES_PASSWORD`: Set a strong database password
-- `JWT_SECRET`: Paste the JWT secret generated in step 2
-- `ENCRYPTION_KEY`: Paste the encryption key generated in step 2
-- Update `DATABASE_URL` with your database password
-
-Example:
-```yaml
-environment:
-  POSTGRES_PASSWORD: "your_strong_password_here"
-  JWT_SECRET: "your_generated_jwt_secret"
-  ENCRYPTION_KEY: "your_generated_encryption_key"
-  DATABASE_URL: "postgresql://totp_user:your_strong_password_here@postgres:5432/totp_sync"
+4. **Edit `.env` file:**
+```bash
+nano .env
 ```
 
-4. **Start the application:**
+Replace the following values:
+- `POSTGRES_PASSWORD`: Set a strong database password
+- `JWT_SECRET`: Paste the JWT secret from step 3
+- `ENCRYPTION_KEY`: Paste the encryption key from step 3  
+- `DATABASE_URL`: Update with the same password as POSTGRES_PASSWORD
+
+Example:
+```env
+POSTGRES_PASSWORD=my_secure_password_here
+JWT_SECRET=1NRBJQja1Q1qjOw7LRXu2hDvm74HA5GbRWJ3yaL9GqM=
+ENCRYPTION_KEY=91797e61a84e73c9dd5f78161f568ae4
+DATABASE_URL=postgresql://totp:my_secure_password_here@postgres:5432/totp
+```
+
+5. **Start the application:**
 ```bash
 docker compose up -d
 ```
 
-5. **Access the app:**
+6. **Access the application:**
 
 Open http://localhost:5173 in your browser
+
+**Important Notes:**
+- The `.env` file is ignored by git and won't be overwritten during updates
+- Always backup your `.env` file before major updates
+- Keep your secrets secure and never commit them to version control
+
+## Updating
+
+To update to the latest version:
+```bash
+git pull
+docker compose down
+docker compose up -d --build
+```
+
+Your `.env` file will be preserved during updates.
 
 ## ⚙️ Configuration
 
@@ -241,6 +288,10 @@ If you find this project useful, please consider giving it a star on GitHub!
 
 [![Star History Chart](https://api.star-history.com/svg?repos=PrzemekSkw/totp-sync&type=Date)](https://star-history.com/#PrzemekSkw/totp-sync&Date)
 
+
+## ⚠️ Known Issues
+
+- **Mandatory 2FA on registration**: Currently disabled by default due to frontend state management issues. Users can still enable 2FA manually in Settings after creating an account. This will be fixed in a future update.
 
 ---
 

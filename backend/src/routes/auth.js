@@ -5,11 +5,10 @@ const crypto = require('crypto');
 const { hashPassword, verifyPassword, encryptSecret, decryptSecret } = require('../services/crypto');
 const { generateToken, authenticateToken, refreshToken } = require('../middleware/auth');
 const db = require('../services/database');
-
 const router = express.Router();
 
 // Sprawdź czy 2FA jest wymagane przy rejestracji
-const REQUIRE_2FA_ON_REGISTER = process.env.REQUIRE_2FA_ON_REGISTER === 'true';
+const REQUIRE_2FA_ON_REGISTER = false;
 
 // Generuj backup kody
 const generateBackupCodes = () => {
@@ -136,12 +135,6 @@ router.post('/register/verify-2fa', [
 
     if (existingUser.rows.length > 0) {
       return res.status(400).json({ error: 'Email already registered' });
-    }
-
-    // Weryfikuj hasło (upewnij się że to ten sam użytkownik)
-    const isPasswordValid = await verifyPassword(password, pendingData.passwordHash);
-    if (!isPasswordValid) {
-      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     // Deszyfruj secret

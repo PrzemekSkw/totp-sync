@@ -16,7 +16,6 @@ export default function Register() {
     password: '',
     confirmPassword: '',
     totpCode: '',
-    pendingData: null,
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -25,7 +24,9 @@ export default function Register() {
   const [show2FASetup, setShow2FASetup] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [backupCodes, setBackupCodes] = useState([]);
+  const [totpSecret, setTotpSecret] = useState('');
   const [copiedBackup, setCopiedBackup] = useState(false);
+  const [pendingRegistrationData, setPendingRegistrationData] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -82,6 +83,9 @@ export default function Register() {
         const qrCode = await QRCode.toDataURL(result.twoFactor.otpauthUrl);
         setQrCodeUrl(qrCode);
         setBackupCodes(result.twoFactor.backupCodes);
+        setTotpSecret(result.twoFactor.secret);
+        setPendingRegistrationData(result.pendingRegistration);
+        
         setShow2FASetup(true);
         setLoading(false);
       } catch (error) {
@@ -107,7 +111,8 @@ export default function Register() {
     const result = await register(
       formData.email, 
       formData.password, 
-      formData.totpCode
+      formData.totpCode,
+      pendingRegistrationData
     );
 
     if (result.success) {
@@ -134,8 +139,8 @@ export default function Register() {
         <div className="max-w-lg w-full">
           <div className="card">
             <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-2xl mb-4">
-                <Shield className="w-8 h-8 text-white" />
+              <div className="inline-flex items-center justify-center w-20 h-20 mb-4">
+                <img src="/logo.png" alt="TOTP Sync" className="w-full h-full drop-shadow-lg rounded-2xl" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                 Setup Two-Factor Authentication
@@ -159,16 +164,13 @@ export default function Register() {
                   Can't scan? Enter manually:
                 </p>
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 font-mono text-sm break-all text-center">
-                  {backupCodes.length > 0 && formData.email ? 
-                    `otpauth://totp/TOTP%20Sync:${formData.email}?secret=${backupCodes[0]}&issuer=TOTP%20Sync`.match(/secret=([^&]+)/)?.[1] || 'Loading...'
-                    : 'Loading...'}
+                  {totpSecret || 'Loading...'}
                 </div>
                 <button
                   type="button"
                   onClick={() => {
-                    const secret = `otpauth://totp/TOTP%20Sync:${formData.email}?secret=${backupCodes[0]}&issuer=TOTP%20Sync`.match(/secret=([^&]+)/)?.[1];
-                    if (secret) {
-                      navigator.clipboard.writeText(secret);
+                    if (totpSecret) {
+                      navigator.clipboard.writeText(totpSecret);
                       toast.success('Secret copied!');
                     }
                   }}
@@ -257,8 +259,8 @@ export default function Register() {
       <div className="max-w-md w-full">
         {/* Logo/Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-2xl mb-4">
-            <Shield className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-20 h-20 mb-4">
+            <img src="/logo.png" alt="TOTP Sync" className="w-full h-full drop-shadow-lg rounded-2xl" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             TOTP Sync
