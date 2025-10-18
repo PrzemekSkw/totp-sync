@@ -17,19 +17,9 @@
   </a>
 </p>
 
-
-> **⚠️ WORK IN PROGRESS - ALPHA VERSION**
-> 
-> This project is in early development stage. Current known issues:
-> - 2FA login functionality is not working correctly
-> - Do NOT enable 2FA in Settings unless you're testing
-> - Expect bugs and breaking changes
-> 
-> **Use at your own risk!**
-
 <p align="center">
-  <img src="https://img.shields.io/badge/status-alpha-red?style=for-the-badge" alt="Alpha Status">
-  <img src="https://img.shields.io/badge/version-0.1.0--alpha-orange?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/status-beta-yellow?style=for-the-badge" alt="Beta Status">
+  <img src="https://img.shields.io/badge/version-0.2.0--beta-green?style=for-the-badge" alt="Version">
 </p>
 
 ---
@@ -52,13 +42,14 @@
 
 - 🔐 Secure TOTP code generation (compatible with Google Authenticator, Authy, etc.)
 - 🔄 Cross-device synchronization via self-hosted backend
-- 📱 Modern web interface
+- 📱 Modern web interface with responsive design
 - 🌙 Dark mode support
 - 📦 Easy Docker deployment
 - 🔒 End-to-end encryption of TOTP secrets
 - 📋 Import/Export (JSON, otpauth URI)
-- 🛡️ Mandatory 2FA on registration (configurable)
+- 🛡️ **Full 2FA support** - Secure login with mandatory or optional 2FA
 - 💾 Backup codes for account recovery
+- 🎨 Clean, modern UI with custom branding
 
 
 ## 🚀 Quick Start
@@ -123,7 +114,7 @@ Open http://localhost:5173 in your browser
 - Always backup your `.env` file before major updates
 - Keep your secrets secure and never commit them to version control
 
-## Updating
+## 📦 Updating
 
 To update to the latest version:
 ```bash
@@ -132,7 +123,7 @@ docker compose down
 docker compose up -d --build
 ```
 
-Your `.env` file will be preserved during updates.
+Your `.env` file and database will be preserved during updates.
 
 ## ⚙️ Configuration
 
@@ -144,7 +135,7 @@ Backend configuration in `docker-compose.yml`:
 |----------|-------------|---------|----------|
 | `REQUIRE_2FA_ON_REGISTER` | Force 2FA setup during registration | `"true"` | No |
 | `JWT_SECRET` | Secret for JWT token signing | - | Yes |
-| `ENCRYPTION_KEY` | Key for encrypting TOTP secrets | - | Yes |
+| `ENCRYPTION_KEY` | Key for encrypting TOTP secrets (must be 32 chars) | - | Yes |
 | `POSTGRES_PASSWORD` | Database password | - | Yes |
 | `DATABASE_URL` | PostgreSQL connection string | - | Yes |
 
@@ -153,12 +144,19 @@ Backend configuration in `docker-compose.yml`:
 - **5173** - Web interface
 - **3000** - Backend API
 
-### Disabling Mandatory 2FA
+### Configuring 2FA Behavior
 
-To allow users to skip 2FA setup during registration, change:
+**Mandatory 2FA (default):**
+```yaml
+REQUIRE_2FA_ON_REGISTER: "true"
+```
+Users must set up 2FA during registration with QR code and backup codes.
+
+**Optional 2FA:**
 ```yaml
 REQUIRE_2FA_ON_REGISTER: "false"
 ```
+Users can enable 2FA later in Settings.
 
 ## 🔒 Security Notes
 
@@ -179,6 +177,23 @@ For production use:
 - Use Docker secrets for sensitive values
 - Set up monitoring and logging
 - Regular security updates
+
+## 🔐 2FA Features
+
+### Registration with 2FA
+- Scan QR code with any authenticator app
+- Receive 10 backup codes for emergency access
+- Verify setup with 6-digit code
+
+### Login with 2FA
+- Enter email and password
+- Automatically prompted for 2FA code
+- Use backup codes if authenticator unavailable
+
+### Managing 2FA
+- Enable/disable 2FA in Settings
+- Generate new backup codes
+- Requires password + current 2FA code to disable
 
 ## 📱 Import/Export
 
@@ -210,11 +225,17 @@ Ensure PostgreSQL is healthy:
 docker compose ps
 ```
 
-### Can't login
+### Can't login after enabling 2FA
+
+1. Use one of your backup codes instead of TOTP code
+2. If no backup codes, you'll need to reset the database
+3. Always save backup codes in a safe place!
+
+### Clear cache issues
 
 1. Clear browser cache and localStorage
-2. Verify JWT_SECRET and ENCRYPTION_KEY are set correctly
-3. Check backend logs for errors
+2. Try incognito/private browsing mode
+3. Check browser console for errors
 
 ## 🛠️ Development
 
@@ -223,9 +244,16 @@ docker compose ps
 totp-sync/
 ├── backend/          # Node.js + Express API
 │   ├── src/
+│   │   ├── routes/   # API endpoints
+│   │   ├── services/ # Business logic
+│   │   └── middleware/ # Auth & validation
 │   └── Dockerfile
 ├── web/              # React + Vite frontend
 │   ├── src/
+│   │   ├── components/ # React components
+│   │   ├── pages/      # Page views
+│   │   ├── services/   # API client
+│   │   └── store/      # State management
 │   └── Dockerfile
 └── docker-compose.yml
 ```
@@ -243,6 +271,20 @@ npm install
 npm run dev
 ```
 
+## 📝 Changelog
+
+### v0.2.0-beta (Latest)
+- ✅ **Fixed 2FA login functionality** - Now working correctly
+- ✅ **Fixed registration with 2FA** - Proper pendingData handling
+- ✅ **Improved UI** - Removed unnecessary icons, added custom branding
+- ✅ **Better error handling** - Clear error messages and validation
+- ✅ **Code cleanup** - Removed unused dependencies
+
+### v0.1.0-alpha
+- Initial release
+- Basic TOTP generation
+- Docker setup
+
 ## 📄 License
 
 MIT License - feel free to use this project for personal or commercial purposes.
@@ -250,6 +292,12 @@ MIT License - feel free to use this project for personal or commercial purposes.
 ## 🤝 Contributing
 
 Contributions are welcome! Feel free to open issues or submit pull requests.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## 💖 Support
 
@@ -278,15 +326,10 @@ If you find this project useful, please consider giving it a star on GitHub!
 
 [![Star History Chart](https://api.star-history.com/svg?repos=PrzemekSkw/totp-sync&type=Date)](https://star-history.com/#PrzemekSkw/totp-sync&Date)
 
-
-## ⚠️ Known Issues
-
-- **Mandatory 2FA on registration**: Currently disabled by default due to frontend state management issues. Users can still enable 2FA manually in Settings after creating an account. This will be fixed in a future update.
-
 ---
 
-## 📄 License
+<p align="center">Made with ❤️ by <a href="https://github.com/PrzemekSkw">PrzemekSkw</a></p>
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-
+<p align="center">
+  <sub>Secure your accounts with self-hosted 2FA</sub>
+</p>
