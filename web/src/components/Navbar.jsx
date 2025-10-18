@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, LogOut, User, Moon, Sun, Shield } from 'lucide-react';
+import { Settings, LogOut, User, Moon, Sun } from 'lucide-react';
 import useStore from '../store/useStore';
 
 export default function Navbar() {

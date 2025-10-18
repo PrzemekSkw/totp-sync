@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Shield, Copy, Check } from 'lucide-react';
+import { Mail, Lock, Copy, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import QRCode from 'qrcode';
 import useStore from '../store/useStore';
@@ -16,7 +16,6 @@ export default function Register() {
     password: '',
     confirmPassword: '',
     totpCode: '',
-    pendingData: null,
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -24,7 +23,9 @@ export default function Register() {
   // 2FA Setup state
   const [show2FASetup, setShow2FASetup] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [secret, setSecret] = useState('');
   const [backupCodes, setBackupCodes] = useState([]);
+  const [pendingData, setPendingData] = useState(null); // ✅ DODANO
   const [copiedBackup, setCopiedBackup] = useState(false);
 
   const handleChange = (e) => {
@@ -76,12 +77,14 @@ export default function Register() {
       toast.success('Registered successfully!');
       navigate('/');
     } else if (result.requires2FA) {
-      // Backend wymaga setup 2FA
+      // ✅ Backend wymaga setup 2FA - zapisz pendingData!
       try {
         // Generuj QR kod z otpauth URL
         const qrCode = await QRCode.toDataURL(result.twoFactor.otpauthUrl);
         setQrCodeUrl(qrCode);
+        setSecret(result.twoFactor.secret);
         setBackupCodes(result.twoFactor.backupCodes);
+        setPendingData(result.pendingRegistration); // ✅ ZAPISZ pendingData
         setShow2FASetup(true);
         setLoading(false);
       } catch (error) {
@@ -104,10 +107,12 @@ export default function Register() {
 
     setLoading(true);
 
+    // ✅ Przekaż pendingData do funkcji register
     const result = await register(
       formData.email, 
       formData.password, 
-      formData.totpCode
+      formData.totpCode,
+      pendingData // ✅ DODANO pendingData
     );
 
     if (result.success) {
@@ -134,8 +139,8 @@ export default function Register() {
         <div className="max-w-lg w-full">
           <div className="card">
             <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-2xl mb-4">
-                <Shield className="w-8 h-8 text-white" />
+              <div className="inline-flex items-center justify-center w-20 h-20 mb-4">
+                <img src="/logo.png" alt="TOTP Sync" className="w-full h-full rounded-2xl" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                 Setup Two-Factor Authentication
@@ -159,14 +164,11 @@ export default function Register() {
                   Can't scan? Enter manually:
                 </p>
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 font-mono text-sm break-all text-center">
-                  {backupCodes.length > 0 && formData.email ? 
-                    `otpauth://totp/TOTP%20Sync:${formData.email}?secret=${backupCodes[0]}&issuer=TOTP%20Sync`.match(/secret=([^&]+)/)?.[1] || 'Loading...'
-                    : 'Loading...'}
+                  {secret || 'Loading...'}
                 </div>
                 <button
                   type="button"
                   onClick={() => {
-                    const secret = `otpauth://totp/TOTP%20Sync:${formData.email}?secret=${backupCodes[0]}&issuer=TOTP%20Sync`.match(/secret=([^&]+)/)?.[1];
                     if (secret) {
                       navigator.clipboard.writeText(secret);
                       toast.success('Secret copied!');
@@ -227,7 +229,7 @@ export default function Register() {
                 value={formData.totpCode}
                 onChange={handleChange}
                 error={errors.totpCode}
-                icon={Shield}
+                icon={Lock}
                 maxLength={6}
                 autoFocus
               />
@@ -257,8 +259,8 @@ export default function Register() {
       <div className="max-w-md w-full">
         {/* Logo/Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-2xl mb-4">
-            <Shield className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-20 h-20 mb-4">
+            <img src="/logo.png" alt="TOTP Sync" className="w-full h-full rounded-2xl" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             TOTP Sync

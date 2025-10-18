@@ -86,7 +86,7 @@ export default function Login() {
         navigate('/');
       } else {
         // Toast tylko przy faktycznym błędzie
-        toast.error(result.error);
+        toast.error(result.error || 'Login failed');
       }
     } catch (error) {
       toast.error('Login failed');
@@ -155,7 +155,7 @@ export default function Login() {
                 value={formData.totpCode}
                 onChange={handleChange}
                 error={errors.totpCode}
-                icon={Shield}
+                icon={Lock}
                 autoComplete="one-time-code"
                 maxLength={6}
                 autoFocus

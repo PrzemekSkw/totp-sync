@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Shield, Download, Copy, Check } from 'lucide-react';
+import { Download, Copy, Check } from 'lucide-react';
 import QRCode from 'qrcode';
 import toast from 'react-hot-toast';
 import Button from './Button';
@@ -201,7 +201,7 @@ export default function TwoFactorSetup({ onClose, onSuccess }) {
             <div className="space-y-4">
               <div className="text-center mb-4">
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full mb-3">
-                  <Shield className="w-8 h-8 text-green-600 dark:text-green-400" />
+                  <img src="/logo.png" alt="Success" className="w-8 h-8" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
                   2FA Enabled!

@@ -61,41 +61,41 @@ git clone https://github.com/PrzemekSkw/totp-sync.git
 cd totp-sync
 ```
 
-2. **Generate secure secrets:**
+2. **Create configuration file:**
 ```bash
-# JWT Secret (copy the output)
+cp .env.example .env
+```
+
+3. **Generate secure secrets:**
+```bash
+# JWT Secret
 openssl rand -base64 32
 
-# Encryption Key (copy the output)
+# Encryption Key
 openssl rand -hex 16
 ```
 
-3. **Configure docker-compose.yml:**
-
-Edit `docker-compose.yml` and replace the following placeholders:
-
-- `POSTGRES_PASSWORD`: Set a strong database password
-- `JWT_SECRET`: Paste the JWT secret generated in step 2
-- `ENCRYPTION_KEY`: Paste the encryption key generated in step 2
-- Update `DATABASE_URL` with your database password
-
-Example:
-```yaml
-environment:
-  POSTGRES_PASSWORD: "your_strong_password_here"
-  JWT_SECRET: "your_generated_jwt_secret"
-  ENCRYPTION_KEY: "your_generated_encryption_key"
-  DATABASE_URL: "postgresql://totp_user:your_strong_password_here@postgres:5432/totp_sync"
+4. **Edit `.env` file:**
+```bash
+nano .env
 ```
 
-4. **Start the application:**
+Replace the following placeholders:
+- `POSTGRES_PASSWORD`: Set a strong database password
+- `JWT_SECRET`: Paste the JWT secret generated in step 3
+- `ENCRYPTION_KEY`: Paste the encryption key generated in step 3
+- Update `DATABASE_URL` with your database password
+
+5. **Start the application:**
 ```bash
 docker compose up -d
 ```
 
-5. **Access the app:**
+6. **Access the app:**
 
 Open http://localhost:5173 in your browser
+
+**Note:** The `.env` file is ignored by git, so your secrets are safe and won't be overwritten during updates.
 
 ## ⚙️ Configuration
 

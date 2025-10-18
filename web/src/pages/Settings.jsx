@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Lock, LogOut, Moon, Sun, Shield } from 'lucide-react';
+import { ArrowLeft, Lock, LogOut, Moon, Sun } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useStore from '../store/useStore';
 import { authAPI } from '../services/api';
@@ -246,7 +246,7 @@ export default function Settings() {
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <Shield className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <Lock className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                 <p className="font-medium text-gray-900 dark:text-white">
                   {twoFactorEnabled ? '2FA Enabled' : '2FA Disabled'}
                 </p>
