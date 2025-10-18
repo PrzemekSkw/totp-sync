@@ -26,12 +26,11 @@ const useStore = create((set, get) => ({
     try {
       const response = await authAPI.login(email, password, totpCode);
       
-      // Sprawdź czy backend wymaga 2FA
+      // ✅ Sprawdź czy backend wymaga 2FA
       if (response.data.requires2FA) {
         return { 
-          success: false,
           requires2FA: true,
-          error: response.data.message 
+          message: response.data.message 
         };
       }
       
@@ -91,7 +90,7 @@ const useStore = create((set, get) => ({
           success: false,
           requires2FA: true,
           twoFactor: response.data.twoFactor, // secret, otpauthUrl, backupCodes
-          user: response.data.user
+          pendingRegistration: response.data.pendingRegistration
         };
       }
       
