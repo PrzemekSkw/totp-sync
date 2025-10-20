@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Plus, Upload, Download, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useStore from '../store/useStore';
@@ -16,6 +16,22 @@ export default function Dashboard() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filtrowanie wpisów na podstawie wyszukiwania
+  const filteredEntries = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return entries;
+    }
+
+    const query = searchQuery.toLowerCase();
+    return entries.filter((entry) => {
+      const name = (entry.name || '').toLowerCase();
+      const issuer = (entry.issuer || '').toLowerCase();
+      
+      return name.includes(query) || issuer.includes(query);
+    });
+  }, [entries, searchQuery]);
 
   // Toggle pojedynczego wpisu
   const toggleSelect = (id) => {
@@ -24,12 +40,12 @@ export default function Dashboard() {
     );
   };
 
-  // Toggle wszystkich
+  // Toggle wszystkich (tylko widocznych po filtrowaniu)
   const toggleSelectAll = () => {
-    if (selectedIds.length === entries.length) {
+    if (selectedIds.length === filteredEntries.length && filteredEntries.length > 0) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(entries.map((e) => e.id));
+      setSelectedIds(filteredEntries.map((e) => e.id));
     }
   };
 
@@ -50,10 +66,16 @@ export default function Dashboard() {
     toast.success(`Deleted ${selectedIds.length} entries`);
   };
 
+  // Obsługa wyszukiwania z Navbar
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    setSelectedIds([]);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Navbar */}
-      <Navbar />
+      <Navbar onSearch={handleSearch} />
 
       {/* Action Bar */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
@@ -62,13 +84,18 @@ export default function Dashboard() {
             <div className="flex items-center gap-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                 Your Accounts
+                {searchQuery && (
+                  <span className="ml-2 text-sm font-normal text-gray-600 dark:text-gray-400">
+                    ({filteredEntries.length} of {entries.length})
+                  </span>
+                )}
               </h2>
               
-              {entries.length > 0 && (
+              {filteredEntries.length > 0 && (
                 <label className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
-                    checked={selectedIds.length === entries.length}
+                    checked={selectedIds.length === filteredEntries.length && filteredEntries.length > 0}
                     onChange={toggleSelectAll}
                     className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                   />
@@ -148,9 +175,27 @@ export default function Dashboard() {
               Add Entry
             </Button>
           </div>
+        ) : filteredEntries.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-full mb-4">
+              <span className="text-2xl">🔍</span>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+              No results found
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Try searching with a different keyword
+            </p>
+            <Button
+              variant="secondary"
+              onClick={() => handleSearch('')}
+            >
+              Clear Search
+            </Button>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {entries.map((entry) => (
+            {filteredEntries.map((entry) => (
               <TOTPCard 
                 key={entry.id} 
                 entry={entry}

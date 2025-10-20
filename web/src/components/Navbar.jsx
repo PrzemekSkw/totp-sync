@@ -1,13 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, LogOut, User, Moon, Sun } from 'lucide-react';
+import { Settings, LogOut, User, Moon, Sun, Search, X } from 'lucide-react';
 import useStore from '../store/useStore';
 
-export default function Navbar() {
+export default function Navbar({ onSearch }) {
   const navigate = useNavigate();
   const { user, logout, isDarkMode, toggleTheme } = useStore();
   const [showMenu, setShowMenu] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const menuRef = useRef(null);
+  const searchRef = useRef(null);
 
   // Zamknij menu po kliknięciu poza nim
   useEffect(() => {
@@ -15,11 +18,42 @@ export default function Navbar() {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setShowMenu(false);
       }
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        if (!searchQuery) {
+          setShowSearch(false);
+        }
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [searchQuery]);
+
+  // Focus na input po otwarciu
+  useEffect(() => {
+    if (showSearch && searchRef.current) {
+      const input = searchRef.current.querySelector('input');
+      if (input) input.focus();
+    }
+  }, [showSearch]);
+
+  // Obsługa wyszukiwania
+  const handleSearchChange = (e) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    if (onSearch) {
+      onSearch(query);
+    }
+  };
+
+  // Wyczyść wyszukiwanie
+  const clearSearch = () => {
+    setSearchQuery('');
+    if (onSearch) {
+      onSearch('');
+    }
+    setShowSearch(false);
+  };
 
   const handleLogout = () => {
     if (confirm('Are you sure you want to log out?')) {
@@ -49,6 +83,43 @@ export default function Navbar() {
 
           {/* Right side */}
           <div className="flex items-center gap-2">
+            {/* Search Bar */}
+            <div 
+              ref={searchRef}
+              className={`flex items-center transition-all duration-300 ease-in-out ${
+                showSearch ? 'w-64' : 'w-10'
+              }`}
+            >
+              {showSearch ? (
+                <div className="relative w-full">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    placeholder="Search accounts..."
+                    className="w-full pl-10 pr-10 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={clearSearch}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowSearch(true)}
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  aria-label="Search"
+                >
+                  <Search className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                </button>
+              )}
+            </div>
+
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
