@@ -9,6 +9,11 @@
 </p>
 
 <p align="center">
+  <img src="https://img.shields.io/badge/status-beta-yellow?style=for-the-badge" alt="Beta Status">
+  <img src="https://img.shields.io/badge/version-0.3.0--beta-green?style=for-the-badge" alt="Version">
+</p>
+
+<p align="center">
   <a href="https://github.com/PrzemekSkw/totp-sync/stargazers">
     <img src="https://img.shields.io/github/stars/PrzemekSkw/totp-sync?style=social" alt="GitHub stars">
   </a>
@@ -35,16 +40,44 @@
 
 ## ✨ Features
 
-- 🔐 Secure TOTP code generation (compatible with Google Authenticator, Authy, etc.)
-- 🔄 Cross-device synchronization via self-hosted backend
-- 📱 Modern web interface
-- 🌙 Dark mode support
-- 📦 Easy Docker deployment
-- 🔒 End-to-end encryption of TOTP secrets
-- 📋 Import/Export (JSON, otpauth URI)
-- 🛡️ Mandatory 2FA on registration (configurable)
-- 💾 Backup codes for account recovery
+### 🔐 Security & Authentication
+- **Secure TOTP generation** - Compatible with Google Authenticator, Authy, 1Password, etc.
+- **End-to-end encryption** - TOTP secrets encrypted with AES-256
+- **Mandatory 2FA** - Optional account protection during registration
+- **Backup codes** - 10 emergency codes per account for recovery
+- **JWT authentication** - Secure 30-day session tokens
 
+### 🔍 Search & Organization
+- **Live search** - Instant filtering as you type
+- **Multi-field search** - Find by account name or issuer/app name
+- **Result counter** - Shows "X of Y" matches
+- **Expandable search bar** - Smooth animations in navbar
+- **Perfect for 100+ entries** - Fast client-side filtering
+
+### 🎨 User Interface
+- **Modern design** - Clean, intuitive interface
+- **Dark mode** - Automatic or manual theme switching
+- **Responsive layout** - Works on desktop, tablet, and mobile browsers
+- **Progress indicators** - Visual countdown for code expiration
+- **Hide codes** - Optional privacy mode (auto-hide after 10 seconds)
+- **Bulk operations** - Select and delete multiple entries
+
+### 📋 Import & Export
+- **JSON format** - Standard TOTP export compatible with most apps
+- **otpauth URI** - Import from Google Authenticator, Authy, FreeOTP+, 2FAuth
+- **Bulk import** - Add multiple accounts at once
+- **Replace or merge** - Choose how to handle existing entries
+
+### 🔄 Synchronization
+- **Cross-device sync** - Access codes from any device via web browser
+- **Self-hosted backend** - Full control over your data
+- **PostgreSQL database** - Reliable and scalable storage
+
+### 🐳 Deployment
+- **Docker Compose** - One-command deployment
+- **Easy updates** - Pull and rebuild without data loss
+- **Environment variables** - Simple configuration
+- **Reverse proxy ready** - Works with Nginx, Caddy, Traefik
 
 ## 🚀 Quick Start
 
@@ -61,17 +94,17 @@ git clone https://github.com/PrzemekSkw/totp-sync.git
 cd totp-sync
 ```
 
-2. **Create configuration file:**
+2. **Create environment file:**
 ```bash
 cp .env.example .env
 ```
 
 3. **Generate secure secrets:**
 ```bash
-# JWT Secret
+# JWT Secret (copy the output)
 openssl rand -base64 32
 
-# Encryption Key
+# Encryption Key (copy the output)
 openssl rand -hex 16
 ```
 
@@ -80,22 +113,44 @@ openssl rand -hex 16
 nano .env
 ```
 
-Replace the following placeholders:
+Replace the following values:
 - `POSTGRES_PASSWORD`: Set a strong database password
-- `JWT_SECRET`: Paste the JWT secret generated in step 3
-- `ENCRYPTION_KEY`: Paste the encryption key generated in step 3
-- Update `DATABASE_URL` with your database password
+- `JWT_SECRET`: Paste the JWT secret from step 3
+- `ENCRYPTION_KEY`: Paste the encryption key from step 3 (must be exactly 32 characters)
+- `DATABASE_URL`: Update with the same password as POSTGRES_PASSWORD
+
+Example:
+```env
+POSTGRES_PASSWORD=my_secure_password_here
+JWT_SECRET=1NRBJQja1Q1qjOw7LRXu2hDvm74HA5GbRWJ3yaL9GqM=
+ENCRYPTION_KEY=91797e61a84e73c9dd5f78161f568ae4
+DATABASE_URL=postgresql://totp:my_secure_password_here@postgres:5432/totp
+```
 
 5. **Start the application:**
 ```bash
 docker compose up -d
 ```
 
-6. **Access the app:**
+6. **Access the application:**
 
 Open http://localhost:5173 in your browser
 
-**Note:** The `.env` file is ignored by git, so your secrets are safe and won't be overwritten during updates.
+**Important Notes:**
+- The `.env` file is ignored by git and won't be overwritten during updates
+- Always backup your `.env` file before major updates
+- Keep your secrets secure and never commit them to version control
+
+## 📦 Updating
+
+To update to the latest version:
+```bash
+git pull
+docker compose down
+docker compose up -d --build
+```
+
+Your `.env` file and database will be preserved during updates.
 
 ## ⚙️ Configuration
 
@@ -107,7 +162,7 @@ Backend configuration in `docker-compose.yml`:
 |----------|-------------|---------|----------|
 | `REQUIRE_2FA_ON_REGISTER` | Force 2FA setup during registration | `"true"` | No |
 | `JWT_SECRET` | Secret for JWT token signing | - | Yes |
-| `ENCRYPTION_KEY` | Key for encrypting TOTP secrets | - | Yes |
+| `ENCRYPTION_KEY` | Key for encrypting TOTP secrets (must be 32 chars) | - | Yes |
 | `POSTGRES_PASSWORD` | Database password | - | Yes |
 | `DATABASE_URL` | PostgreSQL connection string | - | Yes |
 
@@ -116,12 +171,19 @@ Backend configuration in `docker-compose.yml`:
 - **5173** - Web interface
 - **3000** - Backend API
 
-### Disabling Mandatory 2FA
+### Configuring 2FA Behavior
 
-To allow users to skip 2FA setup during registration, change:
+**Mandatory 2FA (default):**
+```yaml
+REQUIRE_2FA_ON_REGISTER: "true"
+```
+Users must set up 2FA during registration with QR code and backup codes.
+
+**Optional 2FA:**
 ```yaml
 REQUIRE_2FA_ON_REGISTER: "false"
 ```
+Users can enable 2FA later in Settings.
 
 ## 🔒 Security Notes
 
@@ -143,6 +205,35 @@ For production use:
 - Set up monitoring and logging
 - Regular security updates
 
+## 🔐 2FA Features
+
+### Registration with 2FA
+- Scan QR code with any authenticator app
+- Receive 10 backup codes for emergency access
+- Verify setup with 6-digit code before account creation
+
+### Login with 2FA
+- Enter email and password
+- Automatically prompted for 2FA code when enabled
+- Use backup codes if authenticator unavailable
+
+### Managing 2FA
+- Enable/disable 2FA in Settings
+- Generate new backup codes
+- Requires password + current 2FA code to disable
+
+## 🔍 Search Features
+
+### Quick Search
+- **Expandable search bar** - Click search icon (🔍) in navbar to expand
+- **Live filtering** - Results update instantly as you type
+- **Multi-field search** - Searches both account names and issuers
+- **Result counter** - Shows "X of Y" when filtering active
+- **Clear button** - Quick reset with X button
+- **Auto-close** - Collapses when clicking outside (if empty)
+
+Perfect for managing 100+ TOTP entries! Fast client-side filtering means instant results.
+
 ## 📱 Import/Export
 
 ### Supported Formats
@@ -155,7 +246,8 @@ For production use:
 1. Export from your current 2FA app (Google Authenticator, Authy, FreeOTP+, 2FAuth, etc.)
 2. In TOTP Sync, click "Import"
 3. Select your export file or paste URIs
-4. Your entries will be encrypted and synced
+4. Choose "Replace All" or "Merge" with existing entries
+5. Your entries will be encrypted and synced
 
 ## 🐛 Troubleshooting
 
@@ -173,11 +265,17 @@ Ensure PostgreSQL is healthy:
 docker compose ps
 ```
 
-### Can't login
+### Can't login after enabling 2FA
+
+1. Use one of your backup codes instead of TOTP code
+2. If no backup codes, you'll need to reset the database
+3. Always save backup codes in a safe place!
+
+### Clear cache issues
 
 1. Clear browser cache and localStorage
-2. Verify JWT_SECRET and ENCRYPTION_KEY are set correctly
-3. Check backend logs for errors
+2. Try incognito/private browsing mode
+3. Check browser console for errors (F12)
 
 ## 🛠️ Development
 
@@ -186,9 +284,16 @@ docker compose ps
 totp-sync/
 ├── backend/          # Node.js + Express API
 │   ├── src/
+│   │   ├── routes/   # API endpoints
+│   │   ├── services/ # Business logic
+│   │   └── middleware/ # Auth & validation
 │   └── Dockerfile
 ├── web/              # React + Vite frontend
 │   ├── src/
+│   │   ├── components/ # React components
+│   │   ├── pages/      # Page views
+│   │   ├── services/   # API client
+│   │   └── store/      # State management
 │   └── Dockerfile
 └── docker-compose.yml
 ```
@@ -206,6 +311,26 @@ npm install
 npm run dev
 ```
 
+## 📝 Changelog
+
+### v0.3.0-beta (Latest)
+- ✅ **Added search functionality** - Live filtering by account name and issuer
+- ✅ **Expandable search bar** - Smooth animations with auto-focus
+- ✅ **Result counter** - Shows "X of Y" matches when searching
+- ✅ **Empty state** - Clear messaging when no results found
+- ✅ **Performance** - Fast client-side filtering for 100+ entries
+
+### v0.2.0-beta
+- ✅ **Fixed 2FA login functionality** - Now working correctly
+- ✅ **Fixed registration with 2FA** - Proper pendingData handling
+- ✅ **Improved UI** - Removed unnecessary icons, added custom branding
+- ✅ **Better error handling** - Clear error messages and validation
+
+### v0.1.0-alpha
+- Initial release
+- Basic TOTP generation
+- Docker setup
+
 ## 📄 License
 
 MIT License - feel free to use this project for personal or commercial purposes.
@@ -213,6 +338,12 @@ MIT License - feel free to use this project for personal or commercial purposes.
 ## 🤝 Contributing
 
 Contributions are welcome! Feel free to open issues or submit pull requests.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## 💖 Support
 
@@ -234,18 +365,16 @@ If you find this project useful, you can support its development:
 
 Your support helps maintain and improve this project. Thank you! ❤️
 
-
 ## ⭐ Star on Github
 
 If you find this project useful, please consider giving it a star on GitHub!
 
 [![Star History Chart](https://api.star-history.com/svg?repos=PrzemekSkw/totp-sync&type=Date)](https://star-history.com/#PrzemekSkw/totp-sync&Date)
 
-
 ---
 
-## 📄 License
+<p align="center">Made with ❤️ by <a href="https://github.com/PrzemekSkw">PrzemekSkw</a></p>
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-
+<p align="center">
+  <sub>Secure your accounts with self-hosted 2FA</sub>
+</p>
