@@ -35,58 +35,48 @@ api.interceptors.response.use(
 
 // Auth endpoints
 export const authAPI = {
-  register: (email, password) => 
+  register: (email, password) =>
     api.post('/auth/register', { email, password }),
-  
-  login: (email, password, token) => 
+  login: (email, password, token) =>
     api.post('/auth/login', { email, password, token }),
-  
-  verify: () => 
+  verify: () =>
     api.get('/auth/verify'),
-  
-  changePassword: (currentPassword, newPassword) => 
+  changePassword: (currentPassword, newPassword) =>
     api.post('/auth/change-password', { currentPassword, newPassword }),
 };
 
 // TOTP endpoints
 export const totpAPI = {
-  getAll: () => 
+  getAll: () =>
     api.get('/totp'),
-  
-  getOne: (id) => 
+  getOne: (id) =>
     api.get(`/totp/${id}`),
-  
-  create: (data) => 
+  create: (data) =>
     api.post('/totp', data),
-  
-  update: (id, data) => 
+  update: (id, data) =>
     api.put(`/totp/${id}`, data),
-  
-  delete: (id) => 
+  delete: (id) =>
     api.delete(`/totp/${id}`),
-  
-  generate: (id) => 
+  generate: (id) =>
     api.get(`/totp/${id}/generate`),
 };
 
 // Sync endpoints
 export const syncAPI = {
-  export: () => 
+  export: () =>
     api.get('/sync/export'),
-  
-  exportUri: () => 
+  exportUri: () =>
     api.get('/sync/export/uri'),
-  
-  importJson: (entries, replaceAll = false) => 
-    api.post('/sync/import/json', { entries, replaceAll }),
-  
-  importUri: (uris) => 
+  importJson: (data, replaceAll = false) => {
+    // Wyślij cały obiekt JSON - backend sam wykryje format
+    const payload = { ...data, replaceAll };
+    return api.post('/sync/import/json', payload);
+  },
+  importUri: (uris) =>
     api.post('/sync/import/uri', { uris }),
-  
-  pull: (lastSyncTime, deviceId) => 
+  pull: (lastSyncTime, deviceId) =>
     api.post('/sync/pull', { lastSyncTime, deviceId }),
-  
-  push: (entries, deviceId) => 
+  push: (entries, deviceId) =>
     api.post('/sync/push', { entries, deviceId }),
 };
 

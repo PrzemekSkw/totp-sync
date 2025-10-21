@@ -8,7 +8,7 @@ import Button from './Button';
 export default function ImportModal({ onClose }) {
   const fetchEntries = useStore((state) => state.fetchEntries);
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState('json'); // 'json' lub 'uri'
+  const [mode, setMode] = useState('json');
   const [replaceAll, setReplaceAll] = useState(false);
 
   // Import z JSON
@@ -20,50 +20,19 @@ export default function ImportModal({ onClose }) {
       const text = await file.text();
       const data = JSON.parse(text);
       
-      // Obsługa różnych formatów
-      let entries = [];
-      
-      if (Array.isArray(data)) {
-        entries = data;
-      } else if (data.entries && Array.isArray(data.entries)) {
-        entries = data.entries;
-      } else if (data.data && Array.isArray(data.data)) {
-        // Format 2FAuth
-        entries = data.data.map(item => ({
-          name: item.account || item.service || 'Unknown',
-          issuer: item.service || '',
-          secret: item.secret,
-          algorithm: (item.algorithm || 'sha1').toUpperCase(),
-          digits: item.digits || 6,
-          period: item.period || 30,
-        }));
-      } else if (data.tokens && Array.isArray(data.tokens)) {
-        // Format FreeOTP+
-        entries = data.tokens.map(token => ({
-          name: token.label || token.name,
-          issuer: token.issuerExt || token.issuer || '',
-          secret: token.secret,
-          algorithm: token.algo || 'SHA1',
-          digits: token.digits || 6,
-          period: token.period || 30,
-        }));
-      } else {
-        throw new Error('Invalid JSON format');
-      }
-
-      if (entries.length === 0) {
-        toast.error('No entries found in file');
-        return;
-      }
-
+      // Wyślij CAŁY obiekt do backendu - backend sam rozpozna format
       setLoading(true);
-      const response = await syncAPI.importJson(entries, replaceAll);
+      const response = await syncAPI.importJson(data, replaceAll);
       
       toast.success(
         `Imported ${response.data.imported} entries${
           response.data.failed > 0 ? `, ${response.data.failed} failed` : ''
         }`
       );
+      
+      if (response.data.failed > 0 && response.data.details?.failed) {
+        console.log('Failed entries:', response.data.details.failed);
+      }
       
       await fetchEntries();
       onClose();
@@ -83,7 +52,6 @@ export default function ImportModal({ onClose }) {
     }
 
     try {
-      // Podziel na linie i wyfiltruj puste
       const uris = text
         .split('\n')
         .map(line => line.trim())

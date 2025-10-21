@@ -25,8 +25,9 @@ export default function Register() {
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [secret, setSecret] = useState('');
   const [backupCodes, setBackupCodes] = useState([]);
-  const [pendingData, setPendingData] = useState(null); // ✅ DODANO
+  const [pendingData, setPendingData] = useState(null);
   const [copiedBackup, setCopiedBackup] = useState(false);
+  const [copiedSecret, setCopiedSecret] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -77,14 +78,16 @@ export default function Register() {
       toast.success('Registered successfully!');
       navigate('/');
     } else if (result.requires2FA) {
-      // ✅ Backend wymaga setup 2FA - zapisz pendingData!
       try {
-        // Generuj QR kod z otpauth URL
-        const qrCode = await QRCode.toDataURL(result.twoFactor.otpauthUrl);
+        // Generuj mniejszy QR kod
+        const qrCode = await QRCode.toDataURL(result.twoFactor.otpauthUrl, {
+          width: 180,
+          margin: 1,
+        });
         setQrCodeUrl(qrCode);
         setSecret(result.twoFactor.secret);
         setBackupCodes(result.twoFactor.backupCodes);
-        setPendingData(result.pendingRegistration); // ✅ ZAPISZ pendingData
+        setPendingData(result.pendingRegistration);
         setShow2FASetup(true);
         setLoading(false);
       } catch (error) {
@@ -107,12 +110,11 @@ export default function Register() {
 
     setLoading(true);
 
-    // ✅ Przekaż pendingData do funkcji register
     const result = await register(
       formData.email, 
       formData.password, 
       formData.totpCode,
-      pendingData // ✅ DODANO pendingData
+      pendingData
     );
 
     if (result.success) {
@@ -132,86 +134,99 @@ export default function Register() {
     setTimeout(() => setCopiedBackup(false), 2000);
   };
 
-  // Modal 2FA Setup
+  const copySecret = () => {
+    if (secret) {
+      navigator.clipboard.writeText(secret);
+      setCopiedSecret(true);
+      toast.success('Secret copied!');
+      setTimeout(() => setCopiedSecret(false), 2000);
+    }
+  };
+
+  // Modal 2FA Setup - KOMPAKTOWY
   if (show2FASetup) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 dark:from-gray-900 dark:to-gray-800 px-4">
-        <div className="max-w-lg w-full">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 dark:from-gray-900 dark:to-gray-800 px-4 py-6">
+        <div className="max-w-md w-full">
           <div className="card">
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-20 h-20 mb-4">
-                <img src="/logo.png" alt="TOTP Sync" className="w-full h-full rounded-2xl" />
+            {/* Header - mniejszy */}
+            <div className="text-center mb-4">
+              <div className="inline-flex items-center justify-center w-12 h-12 mb-3">
+                <img src="/logo.png" alt="TOTP Sync" className="w-full h-full rounded-xl" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                Setup Two-Factor Authentication
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
+                Setup 2FA
               </h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                Scan the QR code with your authenticator app
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Scan with your authenticator app
               </p>
             </div>
 
-            {/* QR Code */}
-            <div className="bg-white dark:bg-gray-700 p-6 rounded-xl mb-6">
-              <div className="flex justify-center mb-4">
+            {/* QR Code - mniejszy */}
+            <div className="bg-white dark:bg-gray-700 p-4 rounded-lg mb-4">
+              <div className="flex justify-center mb-3">
                 {qrCodeUrl && (
-                  <img src={qrCodeUrl} alt="QR Code" className="w-64 h-64" />
+                  <div className="inline-block p-2 bg-white rounded">
+                    <img src={qrCodeUrl} alt="QR Code" className="w-44 h-44" />
+                  </div>
                 )}
               </div>
               
-              {/* Manual Entry Option */}
-              <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 text-center">
-                  Can't scan? Enter manually:
+              {/* Manual Entry - kompaktowy */}
+              <div className="border-t border-gray-200 dark:border-gray-600 pt-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 text-center">
+                  Or enter manually:
                 </p>
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 font-mono text-sm break-all text-center">
-                  {secret || 'Loading...'}
+                <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 rounded p-2">
+                  <code className="flex-1 text-xs font-mono break-all text-center">
+                    {secret}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={copySecret}
+                    className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors shrink-0"
+                  >
+                    {copiedSecret ? (
+                      <Check className="w-4 h-4 text-green-600" />
+                    ) : (
+                      <Copy className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                    )}
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (secret) {
-                      navigator.clipboard.writeText(secret);
-                      toast.success('Secret copied!');
-                    }
-                  }}
-                  className="mt-2 w-full text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400"
-                >
-                  📋 Copy Secret
-                </button>
               </div>
             </div>
 
-            {/* Backup Codes */}
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
+            {/* Backup Codes - kompaktowy */}
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 mb-4">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold text-gray-900 dark:text-white">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
                   Backup Codes
                 </h3>
                 <button
                   onClick={copyBackupCodes}
-                  className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700"
+                  className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700"
                 >
                   {copiedBackup ? (
                     <>
-                      <Check className="w-4 h-4" />
+                      <Check className="w-3 h-3" />
                       Copied
                     </>
                   ) : (
                     <>
-                      <Copy className="w-4 h-4" />
+                      <Copy className="w-3 h-3" />
                       Copy
                     </>
                   )}
                 </button>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                Save these codes in a safe place. You can use them to access your account if you lose your device.
+              <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                Save these codes safely. Use them if you lose your device.
               </p>
-              <div className="grid grid-cols-2 gap-2 font-mono text-sm">
+              <div className="grid grid-cols-2 gap-1.5 font-mono text-xs">
                 {backupCodes.map((code, i) => (
                   <div 
                     key={i}
-                    className="bg-white dark:bg-gray-800 px-3 py-2 rounded border border-gray-200 dark:border-gray-600"
+                    className="bg-white dark:bg-gray-800 px-2 py-1.5 rounded border border-gray-200 dark:border-gray-600 text-center"
                   >
                     {code}
                   </div>
@@ -219,20 +234,28 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Verification Form */}
-            <form onSubmit={handleVerify2FA} className="space-y-4">
-              <Input
-                label="Enter 6-Digit Code"
-                type="text"
-                name="totpCode"
-                placeholder="000000"
-                value={formData.totpCode}
-                onChange={handleChange}
-                error={errors.totpCode}
-                icon={Lock}
-                maxLength={6}
-                autoFocus
-              />
+            {/* Verification Form - kompaktowy */}
+            <form onSubmit={handleVerify2FA} className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Enter 6-Digit Code
+                </label>
+                <input
+                  type="text"
+                  name="totpCode"
+                  placeholder="000000"
+                  value={formData.totpCode}
+                  onChange={handleChange}
+                  maxLength={6}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  autoFocus
+                  className="w-full px-3 py-2 text-center text-lg tracking-widest font-mono border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+                {errors.totpCode && (
+                  <p className="mt-1 text-xs text-red-600">{errors.totpCode}</p>
+                )}
+              </div>
 
               <Button
                 type="submit"
@@ -240,12 +263,12 @@ export default function Register() {
                 loading={loading}
                 className="w-full"
               >
-                Verify & Complete Registration
+                Verify & Complete
               </Button>
             </form>
 
-            <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-4">
-              Make sure to save your backup codes before continuing
+            <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-3">
+              Save your backup codes before continuing
             </p>
           </div>
         </div>

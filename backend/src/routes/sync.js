@@ -7,6 +7,59 @@ const db = require('../services/database');
 const router = express.Router();
 router.use(authenticateToken);
 
+// Konwersja bajtów z FreeOTP+ do base32 string
+const base32Encode = (bytes) => {
+  const base32Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = 0;
+  let value = 0;
+  let output = '';
+
+  for (let i = 0; i < bytes.length; i++) {
+    value = (value << 8) | (bytes[i] & 0xFF);
+    bits += 8;
+
+    while (bits >= 5) {
+      output += base32Chars[(value >>> (bits - 5)) & 31];
+      bits -= 5;
+    }
+  }
+
+  if (bits > 0) {
+    output += base32Chars[(value << (5 - bits)) & 31];
+  }
+
+  return output;
+};
+
+// Konwersja FreeOTP+ entry do standardowego formatu
+const convertFreeOTPEntry = (entry) => {
+  try {
+    if (Array.isArray(entry.secret)) {
+      const unsignedBytes = entry.secret.map(b => b < 0 ? b + 256 : b);
+      entry.secret = base32Encode(unsignedBytes);
+    }
+
+    if (entry.algo) {
+      entry.algorithm = entry.algo.toLowerCase();
+      delete entry.algo;
+    }
+
+    if (entry.issuerExt) {
+      entry.issuer = entry.issuerExt;
+      delete entry.issuerExt;
+    }
+
+    if (entry.label) {
+      entry.name = entry.label;
+      delete entry.label;
+    }
+
+    return entry;
+  } catch (error) {
+    throw new Error(`FreeOTP conversion failed: ${error.message}`);
+  }
+};
+
 // Parsowanie URI otpauth://
 const parseOtpAuthUri = (uri) => {
   try {
@@ -16,7 +69,7 @@ const parseOtpAuthUri = (uri) => {
       throw new Error('Invalid protocol');
     }
 
-    const type = url.hostname; // totp lub hotp
+    const type = url.hostname;
     if (type !== 'totp') {
       throw new Error('Only TOTP is supported');
     }
@@ -32,7 +85,6 @@ const parseOtpAuthUri = (uri) => {
     let issuer = params.get('issuer') || '';
     let name = label;
 
-    // Format: issuer:account
     if (label.includes(':')) {
       const parts = label.split(':');
       issuer = issuer || parts[0];
@@ -43,7 +95,7 @@ const parseOtpAuthUri = (uri) => {
       name: name.trim(),
       issuer: issuer.trim(),
       secret: secret.replace(/\s/g, ''),
-      algorithm: params.get('algorithm') || 'SHA1',
+      algorithm: (params.get('algorithm') || 'SHA1').toLowerCase(),
       digits: parseInt(params.get('digits') || '6'),
       period: parseInt(params.get('period') || '30')
     };
@@ -52,7 +104,7 @@ const parseOtpAuthUri = (uri) => {
   }
 };
 
-// Export wszystkich wpisów do JSON (format FreeOTP+)
+// Export wszystkich wpisów do JSON
 router.get('/export', async (req, res) => {
   try {
     const result = await db.query(
@@ -131,18 +183,47 @@ router.get('/export/uri', async (req, res) => {
 
 // Import z JSON (FreeOTP+, 2FAuth, własny format)
 router.post('/import/json', [
-  body('entries').isArray().withMessage('Entries must be an array')
+  body('entries').optional().isArray().withMessage('Entries must be an array'),
+  body('tokens').optional().isArray().withMessage('Tokens must be an array'),
+  body('data').optional().isArray().withMessage('Data must be an array')
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { entries, replaceAll = false } = req.body;
+  let { entries, replaceAll = false } = req.body;
   const imported = [];
   const failed = [];
 
   try {
+    // Wykryj format FreeOTP+ (ma pole "tokens")
+    if (req.body.tokens && Array.isArray(req.body.tokens)) {
+      console.log('📱 Detected FreeOTP+ format, converting...');
+      entries = req.body.tokens.map(convertFreeOTPEntry);
+    }
+    // Wykryj format 2FAuth (ma pole "data")
+    else if (req.body.data && Array.isArray(req.body.data)) {
+      console.log('🔐 Detected 2FAuth format, converting...');
+      entries = req.body.data.map(item => ({
+        name: item.account || item.service || 'Unknown',
+        issuer: item.service || '',
+        secret: item.secret,
+        algorithm: (item.algorithm || 'sha1').toLowerCase(),
+        digits: item.digits || 6,
+        period: item.period || 30,
+      }));
+    }
+    // Format standardowy (entries jako tablica)
+    else if (Array.isArray(req.body)) {
+      console.log('📋 Detected standard array format');
+      entries = req.body;
+    }
+
+    if (!entries || !Array.isArray(entries)) {
+      return res.status(400).json({ error: 'No valid entries found' });
+    }
+
     // Jeśli replaceAll, usuń wszystkie obecne wpisy
     if (replaceAll) {
       await db.query(
@@ -155,12 +236,66 @@ router.post('/import/json', [
     for (const entry of entries) {
       try {
         // Sprawdź wymagane pola
-        if (!entry.name || !entry.secret) {
-          failed.push({ entry, reason: 'Missing required fields: name or secret' });
+        if (!entry.name) {
+          failed.push({ 
+            name: entry.name || 'Unknown',
+            reason: 'Missing name field' 
+          });
           continue;
         }
 
-        const encryptedSecret = encryptSecret(entry.secret);
+        if (!entry.secret || typeof entry.secret !== 'string' || entry.secret.trim().length === 0) {
+          failed.push({ 
+            name: entry.name,
+            reason: 'Missing or invalid secret field' 
+          });
+          continue;
+        }
+
+        // Walidacja i normalizacja algorithm
+        let algorithm = 'sha1';
+        if (entry.algorithm) {
+          algorithm = entry.algorithm.toLowerCase().replace('sha-', 'sha');
+          if (!['sha1', 'sha256', 'sha512'].includes(algorithm)) {
+            failed.push({ 
+              name: entry.name,
+              reason: `Invalid algorithm: ${entry.algorithm}` 
+            });
+            continue;
+          }
+        }
+
+        // Walidacja digits
+        const digits = parseInt(entry.digits) || 6;
+        if (![6, 7, 8].includes(digits)) {
+          failed.push({ 
+            name: entry.name,
+            reason: `Invalid digits: ${entry.digits}` 
+          });
+          continue;
+        }
+
+        // Walidacja period
+        const period = parseInt(entry.period) || 30;
+        if (period < 10 || period > 120) {
+          failed.push({ 
+            name: entry.name,
+            reason: `Invalid period: ${entry.period}` 
+          });
+          continue;
+        }
+
+        // Spróbuj zaszyfrować secret
+        let encryptedSecret;
+        try {
+          encryptedSecret = encryptSecret(entry.secret.trim());
+        } catch (encErr) {
+          failed.push({ 
+            name: entry.name,
+            reason: `Encryption failed: ${encErr.message}` 
+          });
+          continue;
+        }
 
         const result = await db.query(
           `INSERT INTO totp_entries 
@@ -170,19 +305,27 @@ router.post('/import/json', [
           [
             req.user.userId,
             entry.name,
-            entry.issuer || '',
+            entry.issuer || null,
             encryptedSecret,
-            entry.algorithm || 'SHA1',
-            entry.digits || 6,
-            entry.period || 30,
+            algorithm,
+            digits,
+            period,
             entry.icon || null,
             entry.color || null
           ]
         );
 
-        imported.push(result.rows[0]);
+        imported.push({
+          id: result.rows[0].id,
+          name: result.rows[0].name,
+          issuer: result.rows[0].issuer
+        });
       } catch (err) {
-        failed.push({ entry, reason: err.message });
+        console.error(`Failed to import entry "${entry.name}":`, err);
+        failed.push({ 
+          name: entry.name || 'Unknown',
+          reason: err.message 
+        });
       }
     }
 
@@ -257,7 +400,7 @@ router.post('/import/uri', [
   }
 });
 
-// Synchronizacja - pobierz zmiany od ostatniej synchronizacji
+// Synchronizacja - pobierz zmiany
 router.post('/pull', [
   body('lastSyncTime').optional().isISO8601(),
   body('deviceId').notEmpty()
@@ -265,7 +408,6 @@ router.post('/pull', [
   const { lastSyncTime, deviceId } = req.body;
 
   try {
-    // Pobierz wpisy zmienione po lastSyncTime
     const query = lastSyncTime
       ? `SELECT id, name, issuer, secret_encrypted, algorithm, digits, period, icon, color, position, 
                 updated_at, deleted_at
@@ -281,14 +423,12 @@ router.post('/pull', [
     const params = lastSyncTime ? [req.user.userId, lastSyncTime] : [req.user.userId];
     const result = await db.query(query, params);
 
-    // Deszyfruj sekrety
     const entries = result.rows.map(entry => ({
       ...entry,
       secret: entry.deleted_at ? null : decryptSecret(entry.secret_encrypted),
       secret_encrypted: undefined
     }));
 
-    // Zapisz log synchronizacji
     await db.query(
       'INSERT INTO sync_log (user_id, device_id, sync_type) VALUES ($1, $2, $3)',
       [req.user.userId, deviceId, 'pull']
@@ -304,7 +444,7 @@ router.post('/pull', [
   }
 });
 
-// Synchronizacja - wyślij lokalne zmiany
+// Synchronizacja - wyślij zmiany
 router.post('/push', [
   body('entries').isArray(),
   body('deviceId').notEmpty()
@@ -318,13 +458,11 @@ router.post('/push', [
     for (const entry of entries) {
       try {
         if (entry.deleted_at) {
-          // Soft delete
           await db.query(
             'UPDATE totp_entries SET deleted_at = $1 WHERE id = $2 AND user_id = $3',
             [entry.deleted_at, entry.id, req.user.userId]
           );
         } else if (entry.id) {
-          // Update istniejącego
           const encryptedSecret = entry.secret ? encryptSecret(entry.secret) : null;
           
           await db.query(
@@ -340,7 +478,6 @@ router.post('/push', [
             ]
           );
         } else {
-          // Nowy wpis
           const encryptedSecret = encryptSecret(entry.secret);
           
           const result = await db.query(
@@ -363,7 +500,6 @@ router.post('/push', [
       }
     }
 
-    // Zapisz log synchronizacji
     await db.query(
       'INSERT INTO sync_log (user_id, device_id, sync_type) VALUES ($1, $2, $3)',
       [req.user.userId, deviceId, 'push']
