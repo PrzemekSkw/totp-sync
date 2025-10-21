@@ -10,22 +10,49 @@ if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 32) {
 // Szyfrowanie sekretu TOTP (AES-256)
 const encryptSecret = (secret) => {
   try {
-    const encrypted = CryptoJS.AES.encrypt(secret, ENCRYPTION_KEY).toString();
+    // Walidacja secret przed szyfrowaniem
+    if (!secret || typeof secret !== 'string') {
+      throw new Error('Secret must be a non-empty string');
+    }
+
+    // Usuń białe znaki
+    const cleanSecret = secret.trim();
+    
+    if (cleanSecret.length === 0) {
+      throw new Error('Secret cannot be empty');
+    }
+
+    // Sprawdź czy secret nie jest zbyt długi (max 1000 znaków)
+    if (cleanSecret.length > 1000) {
+      throw new Error('Secret is too long (max 1000 characters)');
+    }
+
+    const encrypted = CryptoJS.AES.encrypt(cleanSecret, ENCRYPTION_KEY).toString();
     return encrypted;
   } catch (error) {
     console.error('Encryption error:', error);
-    throw new Error('Failed to encrypt secret');
+    throw error; // Rzuć oryginalny błąd zamiast nowego
   }
 };
 
 // Deszyfrowanie sekretu TOTP
 const decryptSecret = (encryptedSecret) => {
   try {
+    if (!encryptedSecret || typeof encryptedSecret !== 'string') {
+      throw new Error('Encrypted secret must be a non-empty string');
+    }
+
     const decrypted = CryptoJS.AES.decrypt(encryptedSecret, ENCRYPTION_KEY);
-    return decrypted.toString(CryptoJS.enc.Utf8);
+    const decryptedString = decrypted.toString(CryptoJS.enc.Utf8);
+    
+    if (!decryptedString) {
+      throw new Error('Decryption resulted in empty string');
+    }
+    
+    return decryptedString;
   } catch (error) {
     console.error('Decryption error:', error);
-    throw new Error('Failed to decrypt secret');
+    throw error;
   }
 };
 
