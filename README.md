@@ -79,6 +79,49 @@
 - **Environment variables** - Simple configuration
 - **Reverse proxy ready** - Works with Nginx, Caddy, Traefik
 
+## 🗄️ Database Options
+
+TOTP Sync supports two database backends - choose based on your needs:
+
+### PostgreSQL (Default)
+**Best for:** Multi-user deployments, production environments, high availability
+```env
+DATABASE_TYPE=postgresql
+POSTGRES_DB=totp_sync
+POSTGRES_USER=totp_user
+POSTGRES_PASSWORD=your_secure_password
+DATABASE_URL=postgresql://totp_user:your_password@postgres:5432/totp_sync
+```
+
+**Features:**
+- ✅ Full ACID compliance
+- ✅ Concurrent user support
+- ✅ Advanced querying capabilities
+- ✅ Battle-tested for production
+
+### SQLite
+**Best for:** Personal use, simple deployments, single-user setups
+```env
+DATABASE_TYPE=sqlite
+SQLITE_PATH=/data/totp-sync.db
+```
+
+**Features:**
+- ✅ Zero configuration
+- ✅ Single file database
+- ✅ Perfect for home labs
+- ✅ Easy backups (just copy the file)
+
+### Switching Databases
+
+Simply change `DATABASE_TYPE` in your `.env` file and restart:
+```bash
+docker compose down
+docker compose up -d
+```
+
+**Note:** Data is not automatically migrated between databases. Export your entries before switching.
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -221,18 +264,6 @@ For production use:
 - Enable/disable 2FA in Settings
 - Generate new backup codes
 - Requires password + current 2FA code to disable
-
-## 🔍 Search Features
-
-### Quick Search
-- **Expandable search bar** - Click search icon (🔍) in navbar to expand
-- **Live filtering** - Results update instantly as you type
-- **Multi-field search** - Searches both account names and issuers
-- **Result counter** - Shows "X of Y" when filtering active
-- **Clear button** - Quick reset with X button
-- **Auto-close** - Collapses when clicking outside (if empty)
-
-Perfect for managing 100+ TOTP entries! Fast client-side filtering means instant results.
 
 ## 📱 Import/Export
 
