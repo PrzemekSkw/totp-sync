@@ -24,6 +24,8 @@ services:
     container_name: totp-sync-backend
     restart: unless-stopped
     environment:
+      DATABASE_TYPE: ${DATABASE_TYPE}
+      SQLITE_PATH: ${SQLITE_PATH}
       REQUIRE_2FA_ON_REGISTER: ${REQUIRE_2FA_ON_REGISTER}
       NODE_ENV: ${NODE_ENV}
       PORT: ${PORT}
@@ -39,6 +41,7 @@ services:
       - totp-network
     volumes:
       - ./backend/src:/app/src
+      - sqlite_data:/data
 
   # Web Frontend
   web:
@@ -60,4 +63,6 @@ networks:
 
 volumes:
   postgres_data:
+    driver: local
+  sqlite_data:
     driver: local

@@ -1,27 +1,26 @@
-FROM node:18-alpine
+FROM node:18
+
+# Zainstaluj sqlite3 dla Debian
+RUN apt-get update && \
+    apt-get install -y sqlite3 && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Kopiuj pliki package
 COPY package*.json ./
 
-# Instaluj zależności - zmień npm ci na npm install
 RUN npm install --production
 
-# Kopiuj kod źródłowy
 COPY . .
 
-# Użytkownik bez uprawnień root
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001 && \
-    chown -R nodejs:nodejs /app
+# Stwórz użytkownika nodejs (Debian style)
+RUN groupadd -g 1001 nodejs && \
+    useradd -m -u 1001 -g nodejs nodejs && \
+    mkdir -p /data && \
+    chown -R nodejs:nodejs /app /data
 
 USER nodejs
 
 EXPOSE 3000
-
-# Healthcheck
-#HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-#  CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 CMD ["npm", "start"]
