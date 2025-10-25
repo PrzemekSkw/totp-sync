@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="TOTP Sync - Bezpieczna synchronizacja tokenów uwierzytelniania dwuskładnikowego">
+    <title>TOTP Sync - Bezpieczna synchronizacja 2FA</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-wrapper">
+                <a href="#" class="logo">
+                    <span class="logo-icon">🔐</span>
+                    <span class="logo-text">TOTP Sync</span>
+                </a>
+                <ul class="nav-menu" id="navMenu">
+                    <li><a href="#features" class="nav-link">Funkcje</a></li>
+                    <li><a href="#how-it-works" class="nav-link">Jak działa</a></li>
+                    <li><a href="#download" class="nav-link">Pobierz</a></li>
+                    <li><a href="https://github.com/PrzemekSkw/totp-sync" class="nav-link" target="_blank">GitHub</a></li>
+                </ul>
+                <div class="hamburger" id="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="container">
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    Synchronizuj swoje <span class="gradient-text">kody 2FA</span> bezpiecznie
+                </h1>
+                <p class="hero-description">
+                    TOTP Sync to potężne narzędzie do synchronizacji tokenów uwierzytelniania dwuskładnikowego. 
+                    Bezpieczeństwo spotyka się z wygodą.
+                </p>
+                <div class="hero-buttons">
+                    <a href="#download" class="btn btn-primary">Rozpocznij teraz</a>
+                    <a href="https://github.com/PrzemekSkw/totp-sync" class="btn btn-secondary" target="_blank">
+                        <span class="github-icon">⭐</span> Zobacz na GitHub
+                    </a>
+                </div>
+            </div>
+            <div class="hero-image">
+                <div class="hero-visual">
+                    <div class="floating-card card-1">
+                        <div class="card-icon">🔒</div>
+                        <div class="card-text">Szyfrowanie end-to-end</div>
+                    </div>
+                    <div class="floating-card card-2">
+                        <div class="card-icon">⚡</div>
+                        <div class="card-text">Szybka synchronizacja</div>
+                    </div>
+                    <div class="floating-card card-3">
+                        <div class="card-icon">☁️</div>
+                        <div class="card-text">Cloud backup</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Kluczowe funkcje</h2>
+                <p class="section-description">Wszystko czego potrzebujesz do bezpiecznego zarządzania kodami 2FA</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🔐</div>
+                    <h3 class="feature-title">Bezpieczeństwo</h3>
+                    <p class="feature-description">
+                        Twoje tokeny są szyfrowane za pomocą algorytmów AES-256. 
+                        Żaden nieautoryzowany dostęp nie jest możliwy.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔄</div>
+                    <h3 class="feature-title">Synchronizacja</h3>
+                    <p class="feature-description">
+                        Automatyczna synchronizacja między wszystkimi Twoimi urządzeniami. 
+                        Zawsze aktualne tokeny na każdym urządzeniu.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📱</div>
+                    <h3 class="feature-title">Multi-platform</h3>
+                    <p class="feature-description">
+                        Działa na Windows, macOS, Linux i urządzeniach mobilnych. 
+                        Jedna aplikacja na wszystkie platformy.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3 class="feature-title">Szybkość</h3>
+                    <p class="feature-description">
+                        Natychmiastowy dostęp do kodów. Nie czekaj na synchronizację. 
+                        Wszystko działa błyskawicznie.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💾</div>
+                    <h3 class="feature-title">Backup</h3>
+                    <p class="feature-description">
+                        Automatyczne kopie zapasowe w chmurze. 
+                        Nigdy nie stracisz swoich tokenów.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎨</div>
+                    <h3 class="feature-title">Intuicyjny</h3>
+                    <p class="feature-description">
+                        Prosty i przejrzysty interfejs użytkownika. 
+                        Zarządzaj tokenami bez wysiłku.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="how-it-works" id="how-it-works">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Jak to działa?</h2>
+                <p class="section-description">Trzy proste kroki do pełnej synchronizacji</p>
+            </div>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3 class="step-title">Zainstaluj aplikację</h3>
+                        <p class="step-description">
+                            Pobierz i zainstaluj TOTP Sync na swoich urządzeniach. 
+                            Proces instalacji trwa mniej niż minutę.
+                        </p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3 class="step-title">Dodaj tokeny</h3>
+                        <p class="step-description">
+                            Zaimportuj istniejące tokeny lub dodaj nowe poprzez skanowanie kodów QR. 
+                            Obsługujemy wszystkie popularne usługi.
+                        </p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3 class="step-title">Ciesz się synchronizacją</h3>
+                        <p class="step-description">
+                            Twoje tokeny są teraz zsynchronizowane na wszystkich urządzeniach. 
+                            Automatyczne aktualizacje działają w tle.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Download Section -->
+    <section class="download" id="download">
+        <div class="container">
+            <div class="download-content">
+                <h2 class="download-title">Gotowy aby zacząć?</h2>
+                <p class="download-description">
+                    Dołącz do tysięcy użytkowników, którzy już korzystają z TOTP Sync
+                </p>
+                <div class="download-buttons">
+                    <a href="https://github.com/PrzemekSkw/totp-sync/releases" class="btn btn-download" target="_blank">
+                        <span class="btn-icon">⬇️</span>
+                        Pobierz dla Windows
+                    </a>
+                    <a href="https://github.com/PrzemekSkw/totp-sync/releases" class="btn btn-download" target="_blank">
+                        <span class="btn-icon">⬇️</span>
+                        Pobierz dla macOS
+                    </a>
+                    <a href="https://github.com/PrzemekSkw/totp-sync/releases" class="btn btn-download" target="_blank">
+                        <span class="btn-icon">⬇️</span>
+                        Pobierz dla Linux
+                    </a>
+                </div>
+                <p class="download-note">
+                    Open source • MIT License • Darmowe na zawsze
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-left">
+                    <div class="footer-logo">
+                        <span class="logo-icon">🔐</span>
+                        <span class="logo-text">TOTP Sync</span>
+                    </div>
+                    <p class="footer-description">
+                        Bezpieczna synchronizacja tokenów 2FA
+                    </p>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-column">
+                        <h4 class="footer-heading">Produkt</h4>
+                        <ul class="footer-list">
+                            <li><a href="#features">Funkcje</a></li>
+                            <li><a href="#how-it-works">Jak działa</a></li>
+                            <li><a href="#download">Pobierz</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-column">
+                        <h4 class="footer-heading">Zasoby</h4>
+                        <ul class="footer-list">
+                            <li><a href="https://github.com/PrzemekSkw/totp-sync" target="_blank">GitHub</a></li>
+                            <li><a href="https://github.com/PrzemekSkw/totp-sync/issues" target="_blank">Zgłoś błąd</a></li>
+                            <li><a href="https://github.com/PrzemekSkw/totp-sync/blob/main/README.md" target="_blank">Dokumentacja</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-column">
+                        <h4 class="footer-heading">Społeczność</h4>
+                        <ul class="footer-list">
+                            <li><a href="https://github.com/PrzemekSkw/totp-sync/discussions" target="_blank">Dyskusje</a></li>
+                            <li><a href="https://github.com/PrzemekSkw/totp-sync/blob/main/CONTRIBUTING.md" target="_blank">Współpraca</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 TOTP Sync. Open Source Project.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
