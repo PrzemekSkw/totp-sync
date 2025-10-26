@@ -31,7 +31,7 @@
 
 <div align="center">
 
-https://github.com/PrzemekSkw/totp-sync/raw/main/demo.webm
+<video src="https://github.com/PrzemekSkw/totp-sync/assets/demo.webm" controls></video>
 
 *Watch demo: login → dashboard → settings → add token*
 
