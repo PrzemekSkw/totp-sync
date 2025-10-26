@@ -29,10 +29,6 @@
 
 ## 📺 Live Demo
 
----
-
-## 📺 Live Demo
-
 https://github.com/user-attachments/assets/32998f57-b0a3-4819-bd77-6f8da26fc392.webm
 
 *live demo: login → dashboard → add token*
