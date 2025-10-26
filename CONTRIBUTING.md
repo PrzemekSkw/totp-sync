@@ -18,7 +18,7 @@ If you found a bug:
 ### 2. Feature Requests
 
 Have an idea for a new feature?
-- Open an issue with `enhancement` tag
+- Open an issue with `feature-request` tag
 - Describe in detail:
   - What problem does this feature solve
   - How should it work
@@ -144,7 +144,7 @@ totp-sync/
 
 If you discover a security vulnerability:
 - **DO NOT** open a public issue
-- Email directly: [your-email@example.com]
+- Email directly: totp.sync@gmail.com
 - We'll respond within 48 hours
 
 ## 📞 Questions?
