@@ -56,15 +56,21 @@ body {
 .logo {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
     text-decoration: none;
-    font-size: 1.5rem;
-    font-weight: 700;
     color: var(--text-primary);
 }
 
-.logo-icon {
-    font-size: 1.8rem;
+.logo-image {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.logo-text {
+    font-size: 1.5rem;
+    font-weight: 700;
 }
 
 .nav-menu {
@@ -115,7 +121,7 @@ body {
     transition: all 0.3s ease;
 }
 
-/* Hero Section */
+/* Hero Section with iPhone X */
 .hero {
     min-height: 100vh;
     display: flex;
@@ -137,6 +143,85 @@ body {
     z-index: 0;
 }
 
+/* iPhone X in background - slides up from bottom */
+.hero-phone-container {
+    position: absolute;
+    bottom: -100%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 0;
+    opacity: 0.3;
+    animation: slideUpPhone 1.5s ease-out forwards;
+    animation-delay: 0.3s;
+}
+
+@keyframes slideUpPhone {
+    0% {
+        bottom: -100%;
+        opacity: 0;
+    }
+    100% {
+        bottom: -15%;
+        opacity: 0.3;
+    }
+}
+
+.iphone-x-mockup {
+    width: 320px;
+    height: 650px;
+    position: relative;
+}
+
+.iphone-frame {
+    width: 100%;
+    height: 100%;
+    background: #1a1a1a;
+    border-radius: 40px;
+    padding: 12px;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5),
+                inset 0 0 0 2px #2a2a2a;
+    position: relative;
+}
+
+.iphone-notch {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px;
+    height: 30px;
+    background: #1a1a1a;
+    border-radius: 0 0 20px 20px;
+    z-index: 3;
+}
+
+.iphone-screen {
+    width: 100%;
+    height: 100%;
+    background: #000;
+    border-radius: 32px;
+    overflow: hidden;
+    position: relative;
+}
+
+.phone-screenshot {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.iphone-button {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 140px;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+}
+
+/* Hero Content */
 .hero .container {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -213,7 +298,7 @@ body {
     background: rgba(99, 102, 241, 0.1);
 }
 
-/* Hero Visual */
+/* Hero Visual with Transparent Floating Cards */
 .hero-visual {
     position: relative;
     height: 500px;
@@ -221,7 +306,8 @@ body {
 
 .floating-card {
     position: absolute;
-    background: var(--dark-card);
+    background: rgba(30, 41, 59, 0.4);  /* Transparent background */
+    backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 1rem;
     padding: 1.5rem;
@@ -337,23 +423,79 @@ body {
     line-height: 1.8;
 }
 
-/* How It Works Section */
+/* How It Works Section with MacBook Pro */
 .how-it-works {
     padding: 6rem 0;
     background: var(--dark-bg);
 }
 
-.steps {
-    max-width: 800px;
+.how-it-works-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+    margin-top: 3rem;
+}
+
+/* MacBook Pro Mockup */
+.macbook-container {
+    position: relative;
+}
+
+.macbook-pro {
+    width: 100%;
+    max-width: 500px;
     margin: 0 auto;
+}
+
+.macbook-screen {
+    width: 100%;
+    background: #1a1a1a;
+    border-radius: 8px 8px 0 0;
+    padding: 10px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    position: relative;
+}
+
+.macbook-screenshot {
+    width: 100%;
+    height: auto;
+    border-radius: 4px;
+    display: block;
+}
+
+.macbook-bottom {
+    width: 120%;
+    height: 15px;
+    background: linear-gradient(to bottom, #2a2a2a 0%, #1a1a1a 50%, #0a0a0a 100%);
+    border-radius: 0 0 20px 20px;
+    margin: 0 auto;
+    position: relative;
+    left: -10%;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.macbook-notch {
+    width: 60px;
+    height: 4px;
+    background: #333;
+    border-radius: 2px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* Steps on the right side */
+.steps {
     display: flex;
     flex-direction: column;
-    gap: 3rem;
+    gap: 2.5rem;
 }
 
 .step {
     display: flex;
-    gap: 2rem;
+    gap: 1.5rem;
     align-items: flex-start;
 }
 
@@ -368,6 +510,7 @@ body {
     font-size: 1.5rem;
     font-weight: 700;
     box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+    flex-shrink: 0;
 }
 
 .step-content {
@@ -454,10 +597,15 @@ body {
 .footer-logo {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    font-size: 1.5rem;
-    font-weight: 700;
+    gap: 0.75rem;
     margin-bottom: 1rem;
+}
+
+.footer-logo-image {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    object-fit: cover;
 }
 
 .footer-description {
@@ -502,6 +650,21 @@ body {
 }
 
 /* Responsive Design */
+@media (max-width: 1024px) {
+    .how-it-works-content {
+        grid-template-columns: 1fr;
+        gap: 3rem;
+    }
+
+    .macbook-container {
+        order: 2;
+    }
+
+    .steps {
+        order: 1;
+    }
+}
+
 @media (max-width: 968px) {
     .hero .container {
         grid-template-columns: 1fr;
@@ -530,6 +693,16 @@ body {
 
     .footer-links {
         grid-template-columns: repeat(2, 1fr);
+    }
+
+    .hero-phone-container {
+        width: 250px;
+        height: auto;
+    }
+
+    .iphone-x-mockup {
+        width: 250px;
+        height: 500px;
     }
 }
 
@@ -590,5 +763,9 @@ body {
 
     .footer-links {
         grid-template-columns: 1fr;
+    }
+
+    .hero-phone-container {
+        display: none;
     }
 }

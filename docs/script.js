@@ -73,32 +73,14 @@ document.querySelectorAll('.step').forEach((step, index) => {
     observer.observe(step);
 });
 
-// Add particle effect to hero section (optional)
-function createParticles() {
-    const hero = document.querySelector('.hero');
-    const particleCount = 30;
-
-    for (let i = 0; i < particleCount; i++) {
-        const particle = document.createElement('div');
-        particle.className = 'particle';
-        particle.style.cssText = `
-            position: absolute;
-            width: ${Math.random() * 3 + 1}px;
-            height: ${Math.random() * 3 + 1}px;
-            background: rgba(99, 102, 241, ${Math.random() * 0.5 + 0.2});
-            border-radius: 50%;
-            left: ${Math.random() * 100}%;
-            top: ${Math.random() * 100}%;
-            animation: float ${Math.random() * 10 + 5}s ease-in-out infinite;
-            animation-delay: ${Math.random() * 5}s;
-            pointer-events: none;
-        `;
-        hero.appendChild(particle);
-    }
+// Observe MacBook mockup
+const macbook = document.querySelector('.macbook-pro');
+if (macbook) {
+    macbook.style.opacity = '0';
+    macbook.style.transform = 'translateX(-50px)';
+    macbook.style.transition = 'all 1s ease';
+    observer.observe(macbook);
 }
-
-// Uncomment to enable particles
-// createParticles();
 
 // Track button clicks (optional - for analytics)
 document.querySelectorAll('.btn').forEach(btn => {
