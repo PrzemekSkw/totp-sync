@@ -1,3 +1,6 @@
+## 📖 About
+...
+
 <p align="center">
   <img src="assets/logo.png" alt="TOTP Sync Logo" width="150">
 </p>
@@ -22,6 +25,20 @@
   </a>
 </p>
 
+---
+
+## 📺 Live Demo
+
+<div align="center">
+
+https://github.com/PrzemekSkw/totp-sync/raw/main/demo.webm
+
+*Watch demo: login → dashboard → settings → add token*
+
+</div>
+
+---
+## 📸 Screenshots
 ---
 
 ## 📸 Screenshots
