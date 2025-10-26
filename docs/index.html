@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="TOTP Sync - Bezpieczna synchronizacja tokenów uwierzytelniania dwuskładnikowego">
     <title>TOTP Sync - Bezpieczna synchronizacja 2FA</title>
-    <link rel="icon" type="image/png" href="favicon.ico">
-    <link rel="apple-touch-icon" href="logo.png">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -15,7 +13,7 @@
         <div class="container">
             <div class="nav-wrapper">
                 <a href="#" class="logo">
-                    <img src="logo.png" alt="TOTP Sync" style="width: 40px; height: 40px; border-radius: 8px;">
+                    <span class="logo-icon">🔐</span>
                     <span class="logo-text">TOTP Sync</span>
                 </a>
                 <ul class="nav-menu" id="navMenu">
@@ -69,34 +67,7 @@
             </div>
         </div>
     </section>
-    <!-- Device Preview Section 1 - Mobile -->
-    <section class="device-preview mobile-preview">
-        <div class="container">
-            <div class="preview-content">
-                <div class="device-mockup-3d phone-mockup-3d">
-                    <div class="phone-frame-3d">
-                        <div class="phone-screen">
-                            <img src="screenshots/mobile.jpg" alt="TOTP Sync Mobile" class="device-screenshot">
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-    <!-- Device Preview Section 1 - Mobile -->
-    <section class="device-preview mobile-preview">
-        <div class="container">
-            <div class="preview-content">
-                <div class="phone-mockup-3d">
-                    <div class="phone-frame-3d">
-                        <div class="phone-screen">
-                            <img src="screenshots/mobile.jpg" alt="TOTP Sync Mobile" class="device-screenshot">
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+
     <!-- Features Section -->
     <section class="features" id="features">
         <div class="container">
@@ -157,73 +128,42 @@
         </div>
     </section>
 
-    <!-- How It Works Section with Laptop -->
+    <!-- How It Works Section -->
     <section class="how-it-works" id="how-it-works">
         <div class="container">
-            <div class="how-content-wrapper">
-                <div class="how-text-content">
-                    <h2 class="section-title">Jak to działa?</h2>
-                    <div class="steps-vertical">
-                      </div>
-                
-                <div class="how-device-preview">
-                    <div class="laptop-mockup-3d">
-                        <div class="laptop-screen-frame">
-                            <div class="laptop-camera"></div>
-                            <div class="laptop-screen">
-                                <img src="screenshots/lightdashboard.png" alt="TOTP Sync Dashboard" class="device-screenshot">
-                            </div>
-                        </div>
-                        <div class="laptop-base"></div>
-                        <div class="laptop-bottom"></div>
-                    </div>
-                </div>
+            <div class="section-header">
+                <h2 class="section-title">Jak to działa?</h2>
+                <p class="section-description">Trzy proste kroki do pełnej synchronizacji</p>
             </div>
-        </div>
-    </section>
-                        <div class="step-item">
-                            <div class="step-number">1</div>
-                            <div class="step-info">
-                                <h3 class="step-title">Zainstaluj aplikację</h3>
-                                <p class="step-description">
-                                    Pobierz i zainstaluj TOTP Sync na swoich urządzeniach. 
-                                    Proces instalacji trwa mniej niż minutę.
-                                </p>
-                            </div>
-                        </div>
-                        <div class="step-item">
-                            <div class="step-number">2</div>
-                            <div class="step-info">
-                                <h3 class="step-title">Dodaj tokeny</h3>
-                                <p class="step-description">
-                                    Zaimportuj istniejące tokeny lub dodaj nowe poprzez skanowanie kodów QR. 
-                                    Obsługujemy wszystkie popularne usługi.
-                                </p>
-                            </div>
-                        </div>
-                        <div class="step-item">
-                            <div class="step-number">3</div>
-                            <div class="step-info">
-                                <h3 class="step-title">Ciesz się synchronizacją</h3>
-                                <p class="step-description">
-                                    Twoje tokeny są teraz zsynchronizowane na wszystkich urządzeniach. 
-                                    Automatyczne aktualizacje działają w tle.
-                                </p>
-                            </div>
-                        </div>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3 class="step-title">Zainstaluj aplikację</h3>
+                        <p class="step-description">
+                            Pobierz i zainstaluj TOTP Sync na swoich urządzeniach. 
+                            Proces instalacji trwa mniej niż minutę.
+                        </p>
                     </div>
                 </div>
-                
-                <div class="how-device-preview">
-                    <div class="laptop-mockup-3d">
-                        <div class="laptop-screen-frame">
-                            <div class="laptop-camera"></div>
-                            <div class="laptop-screen">
-                                <img src="screenshots/lightdashboard.png" alt="TOTP Sync Dashboard" class="device-screenshot">
-                            </div>
-                        </div>
-                        <div class="laptop-base"></div>
-                        <div class="laptop-bottom"></div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3 class="step-title">Dodaj tokeny</h3>
+                        <p class="step-description">
+                            Zaimportuj istniejące tokeny lub dodaj nowe poprzez skanowanie kodów QR. 
+                            Obsługujemy wszystkie popularne usługi.
+                        </p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3 class="step-title">Ciesz się synchronizacją</h3>
+                        <p class="step-description">
+                            Twoje tokeny są teraz zsynchronizowane na wszystkich urządzeniach. 
+                            Automatyczne aktualizacje działają w tle.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -265,7 +205,7 @@
             <div class="footer-content">
                 <div class="footer-left">
                     <div class="footer-logo">
-                        <img src="logo.png" alt="TOTP Sync" style="width: 40px; height: 40px; border-radius: 8px;">
+                        <span class="logo-icon">🔐</span>
                         <span class="logo-text">TOTP Sync</span>
                     </div>
                     <p class="footer-description">
