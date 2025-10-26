@@ -107,3 +107,30 @@ document.querySelectorAll('.btn').forEach(btn => {
         console.log('Button clicked:', e.target.textContent);
     });
 });
+// Scroll animations for device mockups
+const observerOptions = {
+    threshold: 0.2,
+    rootMargin: '0px 0px -100px 0px'
+};
+
+const deviceObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+        }
+    });
+}, observerOptions);
+
+// Observe device mockups
+document.addEventListener('DOMContentLoaded', () => {
+    const phoneMockup = document.querySelector('.phone-mockup-3d');
+    const laptopMockup = document.querySelector('.laptop-mockup-3d');
+    
+    if (phoneMockup) {
+        deviceObserver.observe(phoneMockup);
+    }
+    
+    if (laptopMockup) {
+        deviceObserver.observe(laptopMockup);
+    }
+});
