@@ -31,14 +31,15 @@
 
 <div align="center">
 
-<video src="https://github.com/PrzemekSkw/totp-sync/assets/demo.webm" controls></video>
+<video width="80%" controls>
+  <source src="demo.webm" type="video/webm">
+  Your browser does not support the video tag.
+</video>
 
-*Watch demo: login → dashboard → settings → add token*
+*live demo: login → dashboard → add token*
 
 </div>
 
----
-## 📸 Screenshots
 ---
 
 ## 📸 Screenshots
