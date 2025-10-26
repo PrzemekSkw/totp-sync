@@ -620,7 +620,7 @@ body {
     height: 650px;
     background: linear-gradient(145deg, #1e293b, #0f172a);
     border-radius: 3rem;
-    padding: 1rem;
+    padding: 0.5rem;
     box-shadow: 
         0 30px 80px rgba(0, 0, 0, 0.6),
         inset 0 0 0 2px rgba(255, 255, 255, 0.1);
