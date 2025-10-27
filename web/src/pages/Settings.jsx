@@ -23,6 +23,13 @@ export default function Settings() {
   });
   const [errors, setErrors] = useState({});
 
+  // Delete account states
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteTwoFactorCode, setDeleteTwoFactorCode] = useState('');
+  const [deleteConfirmation, setDeleteConfirmation] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Sprawdź status 2FA
   useEffect(() => {
     const check2FAStatus = async () => {
@@ -130,6 +137,42 @@ export default function Settings() {
       toast.error(error.message || 'Failed to disable 2FA');
     } finally {
       setDisabling2FA(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!deletePassword || !deleteConfirmation) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+
+    if (twoFactorEnabled && !deleteTwoFactorCode) {
+      toast.error('2FA code is required');
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      await authAPI.deleteAccount(deletePassword, deleteTwoFactorCode || undefined);
+      
+      // Close modal
+      setShowDeleteModal(false);
+      
+      // Show success message
+      toast.success('Account deleted successfully');
+      
+      // Logout (clears localStorage and state)
+      logout();
+      
+      // Redirect to login page
+      setTimeout(() => {
+        navigate('/login', { replace: true });
+      }, 500);
+
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to delete account');
+      setIsDeleting(false);
     }
   };
 
@@ -346,6 +389,28 @@ export default function Settings() {
             Danger Zone
           </h2>
           <div className="space-y-4">
+            {/* Delete Account */}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  Delete Account
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Permanently delete your account and all data
+                </p>
+              </div>
+              <Button
+                variant="danger"
+                onClick={() => setShowDeleteModal(true)}
+              >
+                Delete Account
+              </Button>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-gray-200 dark:border-gray-700"></div>
+
+            {/* Log Out */}
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium text-gray-900 dark:text-white">
@@ -366,6 +431,88 @@ export default function Settings() {
           </div>
         </div>
       </main>
+
+      {/* Delete Account Modal */}
+      {showDeleteModal && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowDeleteModal(false)}
+        >
+          <div 
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">
+              ⚠️ Delete Account
+            </h2>
+            
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+              <p className="text-red-800 dark:text-red-200 font-medium">
+                This will permanently delete your account and all TOTP tokens. 
+                This action cannot be undone!
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <Input
+                label="Confirm Password"
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                placeholder="Enter your password"
+                icon={Lock}
+              />
+
+              {twoFactorEnabled && (
+                <Input
+                  label="2FA Code"
+                  type="text"
+                  value={deleteTwoFactorCode}
+                  onChange={(e) => setDeleteTwoFactorCode(e.target.value)}
+                  placeholder="Enter 6-digit code"
+                  maxLength="6"
+                />
+              )}
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={deleteConfirmation}
+                  onChange={(e) => setDeleteConfirmation(e.target.checked)}
+                  className="w-4 h-4 text-red-600 rounded focus:ring-red-500"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  I understand this action cannot be undone
+                </span>
+              </label>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeletePassword('');
+                  setDeleteTwoFactorCode('');
+                  setDeleteConfirmation(false);
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleDeleteAccount}
+                disabled={!deletePassword || !deleteConfirmation || isDeleting}
+                loading={isDeleting}
+                className="flex-1"
+              >
+                {isDeleting ? 'Deleting...' : 'Delete My Account'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Two-Factor Setup Modal */}
       {showTwoFactorSetup && (

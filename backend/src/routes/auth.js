@@ -483,4 +483,62 @@ router.get('/2fa/status', authenticateToken, async (req, res) => {
   }
 });
 
+// Delete account endpoint
+router.delete('/account', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { password, twoFactorCode } = req.body;
+
+    // Get user from database
+    const userResult = await db.query(
+      'SELECT id, email, password_hash, totp_enabled, totp_secret_encrypted FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = userResult.rows[0];
+
+    // Verify password
+    const validPassword = await verifyPassword(password, user.password_hash);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Invalid password' });
+    }
+
+    // Verify 2FA if enabled
+    if (user.totp_enabled) {
+      if (!twoFactorCode) {
+        return res.status(400).json({ error: '2FA code required' });
+      }
+
+      const secret = decryptSecret(user.totp_secret_encrypted);
+      const verified = authenticator.verify({
+        token: twoFactorCode,
+        secret
+      });
+
+      if (!verified) {
+        return res.status(401).json({ error: 'Invalid 2FA code' });
+      }
+    }
+
+    // Delete all user's TOTP entries
+    await db.query('DELETE FROM totp_entries WHERE user_id = $1', [userId]);
+
+    // Delete user account
+    await db.query('DELETE FROM users WHERE id = $1', [userId]);
+
+    res.json({ 
+      success: true,
+      message: 'Account deleted successfully' 
+    });
+
+  } catch (error) {
+    console.error('Delete account error:', error);
+    res.status(500).json({ error: 'Failed to delete account' });
+  }
+});
+
 module.exports = router;

@@ -24,6 +24,10 @@ export default function TOTPCard({ entry, isSelected, onToggleSelect }) {
       setCode(formatTOTPCode(response.data.token));
       setTimeRemaining(response.data.timeRemaining);
     } catch (error) {
+      // Jeśli 404 (wpis usunięty), po prostu przestań próbować
+      if (error.response?.status === 404) {
+        return;
+      }
       console.error('Failed to generate code:', error);
       setCode('••• •••');
     }

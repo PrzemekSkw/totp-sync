@@ -48,7 +48,7 @@ const query = async (sql, params = []) => {
     
     console.log(sqliteSql); // Debug
     
-    // INSERT/UPDATE/DELETE z RETURNING
+    // INSERT z RETURNING
     if (sqliteSql.trim().toUpperCase().startsWith('INSERT') && sqliteSql.includes('RETURNING')) {
       // SQLite nie obsługuje RETURNING
       const insertSql = sqliteSql.split('RETURNING')[0].trim();
@@ -69,6 +69,22 @@ const query = async (sql, params = []) => {
       }
       
       return { rows: [row] };
+    }
+    
+    // UPDATE/DELETE z RETURNING
+    if ((sqliteSql.trim().toUpperCase().startsWith('UPDATE') ||
+         sqliteSql.trim().toUpperCase().startsWith('DELETE')) && 
+        sqliteSql.includes('RETURNING')) {
+      // SQLite nie obsługuje RETURNING - usuń i zwróć dummy row
+      const mainSql = sqliteSql.split('RETURNING')[0].trim();
+      const stmt = db.prepare(mainSql);
+      const info = stmt.run(...sqliteParams);
+      
+      // Zwróć dummy row jeśli coś zostało zmienione
+      if (info.changes > 0) {
+        return { rows: [{ id: sqliteParams[0] }], rowCount: info.changes };
+      }
+      return { rows: [], rowCount: 0 };
     }
     
     // INSERT/UPDATE/DELETE bez RETURNING

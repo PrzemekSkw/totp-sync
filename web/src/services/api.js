@@ -43,6 +43,8 @@ export const authAPI = {
     api.get('/auth/verify'),
   changePassword: (currentPassword, newPassword) =>
     api.post('/auth/change-password', { currentPassword, newPassword }),
+  deleteAccount: (password, twoFactorCode) =>
+    api.delete('/auth/account', { data: { password, twoFactorCode } }),
 };
 
 // TOTP endpoints

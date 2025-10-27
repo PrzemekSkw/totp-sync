@@ -187,6 +187,11 @@ router.post('/import/json', [
   body('tokens').optional().isArray().withMessage('Tokens must be an array'),
   body('data').optional().isArray().withMessage('Data must be an array')
 ], async (req, res) => {
+  // ✅ Sprawdź autoryzację na początku funkcji
+  if (!req.user || !req.user.userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
