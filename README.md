@@ -25,6 +25,38 @@
   </a>
 </p>
 
+<p align="center">
+  <img src="https://img.shields.io/badge/status-beta-yellow?style=for-the-badge" alt="Beta Status">
+  <img src="https://img.shields.io/badge/version-0.4.0--beta-green?style=for-the-badge" alt="Version">
+</p>
+
+---
+
+## 🆕 What's New in v0.4.0-beta
+
+### 🔒 Security Upgrade (Breaking Change)
+- **Removed CryptoJS** - Migrated to Node.js native `crypto` module
+- **AES-256-GCM encryption** - More secure than previous AES-256-CBC implementation
+- **Enhanced authentication tags** - Built-in message authentication
+- **Node.js 20** - Updated for better performance and security
+- **Zero vulnerabilities** - Clean npm security audit
+
+### 📊 Database Flexibility
+- **SQLite support** - Easy switch between PostgreSQL and SQLite
+- **Simple configuration** - Change `DATABASE_TYPE` in `.env`
+- **Perfect for home labs** - SQLite for personal use, PostgreSQL for production
+
+### ⚠️ Migration Notice
+**This is a breaking change!** Data encrypted with v0.3.0 or older cannot be decrypted in v0.4.0.
+
+**If upgrading from v0.3.0 or older:**
+1. Export your TOTP entries before updating
+2. Update to v0.4.0
+3. Re-import your entries
+
+[See migration guide →](https://github.com/PrzemekSkw/totp-sync/wiki/Migration-Guide)
+
+---
 ---
 
 ## 📺 Live Demo
@@ -355,7 +387,15 @@ npm run dev
 
 ## 📝 Changelog
 
-### v0.3.0-beta (Latest)
+### v0.4.0-beta (Current - October 2024)
+- 🔒 **Security upgrade** - Removed CryptoJS, using native Node.js crypto
+- 🔐 **AES-256-GCM** - More secure encryption with authentication tags
+- 📊 **Database flexibility** - Easy switch between PostgreSQL and SQLite
+- 🐳 **Node.js 20** - Updated for better compatibility
+- 🛡️ **Zero vulnerabilities** - Clean npm security audit
+- ⚠️ **Breaking change** - Requires data re-import from older versions
+
+### v0.3.0-beta
 - ✅ **Added search functionality** - Live filtering by account name and issuer
 - ✅ **Expandable search bar** - Smooth animations with auto-focus
 - ✅ **Result counter** - Shows "X of Y" matches when searching
