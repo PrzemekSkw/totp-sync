@@ -12,11 +12,6 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/status-beta-yellow?style=for-the-badge" alt="Beta Status">
-  <img src="https://img.shields.io/badge/version-0.3.0--beta-green?style=for-the-badge" alt="Version">
-</p>
-
-<p align="center">
   <a href="https://github.com/PrzemekSkw/totp-sync/stargazers">
     <img src="https://img.shields.io/github/stars/PrzemekSkw/totp-sync?style=social" alt="GitHub stars">
   </a>
