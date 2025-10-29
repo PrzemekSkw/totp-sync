@@ -20,6 +20,20 @@ const generateBackupCodes = () => {
   return codes;
 };
 
+// Helper: Parsuj backup codes (SQLite zwraca JSON string, PostgreSQL array)
+const parseBackupCodes = (backupCodes) => {
+  if (!backupCodes) return [];
+  if (Array.isArray(backupCodes)) return backupCodes;
+  if (typeof backupCodes === 'string') {
+    try {
+      return JSON.parse(backupCodes);
+    } catch (e) {
+      return [];
+    }
+  }
+  return [];
+};
+
 // Walidacja
 const registerValidation = [
   body('email').isEmail().normalizeEmail(),
@@ -223,9 +237,15 @@ router.post('/login', loginValidation, async (req, res) => {
 
       // Jeśli TOTP niepoprawny, sprawdź backup kody
       if (!isTokenValid) {
-        if (user.backup_codes && user.backup_codes.includes(totpToken)) {
+        // Parsuj backup codes (SQLite zwraca JSON string)
+        const backupCodesArray = parseBackupCodes(user.backup_codes);
+        const normalizedToken = totpToken.toUpperCase().trim();
+        
+        console.log('DEBUG backup codes:', { backupCodesArray, normalizedToken, match: backupCodesArray.includes(normalizedToken) });
+        
+        if (backupCodesArray.includes(normalizedToken)) {
           // Usuń użyty backup kod
-          const newBackupCodes = user.backup_codes.filter(code => code !== totpToken);
+          const newBackupCodes = backupCodesArray.filter(code => code !== normalizedToken);
           await db.query(
             'UPDATE users SET backup_codes = $1 WHERE id = $2',
             [newBackupCodes, user.id]

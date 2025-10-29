@@ -42,11 +42,11 @@ export default function Login() {
       newErrors.password = 'Password is required';
     }
     
-    // Walidacja 2FA tylko jeśli pole jest widoczne
+    // Walidacja 2FA - akceptuj 6 cyfr (TOTP) lub 8 znaków (backup code)
     if (requires2FA && !formData.totpCode) {
       newErrors.totpCode = '2FA code is required';
-    } else if (requires2FA && formData.totpCode.length !== 6) {
-      newErrors.totpCode = '2FA code must be 6 digits';
+    } else if (requires2FA && formData.totpCode.length !== 6 && formData.totpCode.length !== 8) {
+      newErrors.totpCode = '2FA code must be 6 digits or 8-character backup code';
     }
     
     return newErrors;
@@ -151,13 +151,13 @@ export default function Login() {
                 label="Two-Factor Code"
                 type="text"
                 name="totpCode"
-                placeholder="000000"
+                placeholder="123456 or ABCD1234"
                 value={formData.totpCode}
                 onChange={handleChange}
                 error={errors.totpCode}
                 icon={Lock}
                 autoComplete="one-time-code"
-                maxLength={6}
+                maxLength={8}
                 autoFocus
               />
             )}
