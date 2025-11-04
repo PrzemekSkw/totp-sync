@@ -604,7 +604,7 @@ router.post('/webauthn/register-options', authenticateToken, async (req, res) =>
     );
 
     const excludeCredentials = result.rows.map(row => ({
-      id: Buffer.from(row.credential_id, 'base64'),
+      id: row.credential_id,
       type: 'public-key',
     }));
 

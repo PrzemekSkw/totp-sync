@@ -23,6 +23,40 @@ const getConnection = () => {
   return db;
 };
 
+// Helper: Fix REAL to INTEGER conversion
+const fixRowTypes = (row) => {
+  if (!row) return row;
+  
+  const fixed = { ...row };
+  
+  // Convert REAL to INTEGER for ID fields
+  if (fixed.id && typeof fixed.id === 'number') {
+    fixed.id = Math.floor(fixed.id);
+  }
+  if (fixed.user_id && typeof fixed.user_id === 'number') {
+    fixed.user_id = Math.floor(fixed.user_id);
+  }
+  
+  // Deserialize JSON arrays
+  if (fixed.backup_codes && typeof fixed.backup_codes === 'string') {
+    try {
+      fixed.backup_codes = JSON.parse(fixed.backup_codes);
+    } catch (e) {
+      // Leave as string if not JSON
+    }
+  }
+  
+  if (fixed.transports && typeof fixed.transports === 'string') {
+    try {
+      fixed.transports = JSON.parse(fixed.transports);
+    } catch (e) {
+      // Leave as string if not JSON
+    }
+  }
+  
+  return fixed;
+};
+
 // Adapter query - compatible with PostgreSQL API
 const query = async (sql, params = []) => {
   try {
@@ -59,14 +93,8 @@ const query = async (sql, params = []) => {
       const selectSql = `SELECT * FROM users WHERE id = ?`;
       let row = db.prepare(selectSql).get(info.lastInsertRowid);
       
-      // Deserialize JSON back to arrays
-      if (row && row.backup_codes) {
-        try {
-          row.backup_codes = JSON.parse(row.backup_codes);
-        } catch (e) {
-          // Already an array or null
-        }
-      }
+      // Fix types
+      row = fixRowTypes(row);
       
       return { rows: [row] };
     }
@@ -82,7 +110,7 @@ const query = async (sql, params = []) => {
       
       // Return dummy row if something was changed
       if (info.changes > 0) {
-        return { rows: [{ id: sqliteParams[0] }], rowCount: info.changes };
+        return { rows: [{ id: Math.floor(sqliteParams[0]) }], rowCount: info.changes };
       }
       return { rows: [], rowCount: 0 };
     }
@@ -104,17 +132,8 @@ const query = async (sql, params = []) => {
     const stmt = db.prepare(sqliteSql);
     let rows = stmt.all(...sqliteParams);
     
-    // Deserialize JSON back to arrays
-    rows = rows.map(row => {
-      if (row.backup_codes && typeof row.backup_codes === 'string') {
-        try {
-          row.backup_codes = JSON.parse(row.backup_codes);
-        } catch (e) {
-          // Leave as string
-        }
-      }
-      return row;
-    });
+    // Fix types for all rows
+    rows = rows.map(fixRowTypes);
     
     return { rows, rowCount: rows.length };
     

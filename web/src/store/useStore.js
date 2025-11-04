@@ -113,6 +113,14 @@ const useStore = create((set, get) => ({
     }
   },
 
+  // Set authentication directly (for WebAuthn)
+  setAuth: (token, user) => {
+    localStorage.setItem('token', token);
+    set({ token, user, isAuthenticated: true });
+    // Load entries after authentication
+    get().fetchEntries();
+  },
+
   logout: () => {
     localStorage.removeItem('token');
     set({ 

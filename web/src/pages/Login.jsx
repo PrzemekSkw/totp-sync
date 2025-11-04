@@ -11,6 +11,7 @@ import Input from '../components/Input';
 export default function Login() {
   const navigate = useNavigate();
   const login = useStore((state) => state.login);
+  const setAuth = useStore((state) => state.setAuth);
   
   const [formData, setFormData] = useState({
     email: localStorage.getItem('rememberedEmail') || '',
@@ -118,16 +119,11 @@ export default function Login() {
       const verifyResponse = await webAuthnAPI.loginVerify(credential, userId);
 
       if (verifyResponse.data.success) {
-        // Store token and user data
+        // Store token and user data using setAuth
         const { token, user } = verifyResponse.data;
-        localStorage.setItem('token', token);
         
-        // Update store
-        useStore.setState({ 
-          token, 
-          user, 
-          isAuthenticated: true 
-        });
+        // Use setAuth to properly update store and load entries
+        setAuth(token, user);
 
         // Remember email if checkbox is checked
         if (rememberMe) {
