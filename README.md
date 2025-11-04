@@ -13,7 +13,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/status-beta-yellow?style=for-the-badge" alt="Beta Status">
-  <img src="https://img.shields.io/badge/version-0.3.0--beta-green?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.5.0--beta-green?style=for-the-badge" alt="Version">
 </p>
 
 <p align="center">
@@ -54,9 +54,22 @@ https://github.com/user-attachments/assets/32998f57-b0a3-4819-bd77-6f8da26fc392.
 ### 🔐 Security & Authentication
 - **Secure TOTP generation** - Compatible with Google Authenticator, Authy, 1Password, etc.
 - **End-to-end encryption** - TOTP secrets encrypted with AES-256
+- **WebAuthn/Passkey support** - Passwordless login with biometrics (Touch ID, Face ID, Windows Hello)
+- **Security key authentication** - YubiKey, Titan, and other FIDO2 hardware keys
+- **Cross-device authentication** - Scan QR code with phone to login from desktop
 - **Mandatory 2FA** - Optional account protection during registration
 - **Backup codes** - 10 emergency codes per account for recovery
 - **JWT authentication** - Secure 30-day session tokens
+- **Registration control** - Enable/disable new user signups
+
+### 🔑 WebAuthn Features
+- **Passwordless login** - Use biometrics or security keys instead of passwords
+- **Multiple authenticators** - Register YubiKey, Touch ID, Android biometrics simultaneously
+- **Cross-platform support** - Works on desktop, mobile, and hardware keys
+- **Platform authenticators** - Touch ID (Mac/iOS), Face ID (iOS), Windows Hello
+- **Roaming authenticators** - YubiKey, Google Titan, USB security keys
+- **QR code authentication** - Scan with phone to authenticate on desktop
+- **Security key management** - Add, rename, and remove keys in Settings
 
 ### 🔍 Search & Organization
 - **Live search** - Instant filtering as you type
@@ -82,9 +95,9 @@ https://github.com/user-attachments/assets/32998f57-b0a3-4819-bd77-6f8da26fc392.
 ### 🔄 Synchronization
 - **Cross-device sync** - Access codes from any device via web browser
 - **Self-hosted backend** - Full control over your data
-- **PostgreSQL database** - Reliable and scalable storage
+- **PostgreSQL or SQLite** - Choose your preferred database
 
-### 🐳 Deployment
+### �� Deployment
 - **Docker Compose** - One-command deployment
 - **Easy updates** - Pull and rebuild without data loss
 - **Environment variables** - Simple configuration
@@ -181,6 +194,15 @@ ENCRYPTION_KEY=91797e61a84e73c9dd5f78161f568ae4
 DATABASE_URL=postgresql://totp:my_secure_password_here@postgres:5432/totp
 ```
 
+**Optional WebAuthn configuration (for passwordless login):**
+```env
+RP_NAME="TOTP Sync"
+RP_ID="yourdomain.com"
+ORIGIN="https://yourdomain.com"
+```
+
+**Note:** WebAuthn requires HTTPS in production. Use `localhost` for local testing.
+
 5. **Start the application:**
 ```bash
 docker compose up -d
@@ -194,6 +216,7 @@ Open http://localhost:5173 in your browser
 - The `.env` file is ignored by git and won't be overwritten during updates
 - Always backup your `.env` file before major updates
 - Keep your secrets secure and never commit them to version control
+- WebAuthn requires HTTPS in production (except localhost)
 
 ## 📦 Updating
 
@@ -215,10 +238,36 @@ Backend configuration in `docker-compose.yml`:
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
 | `REQUIRE_2FA_ON_REGISTER` | Force 2FA setup during registration | `"true"` | No |
+| `ALLOW_REGISTRATION` | Enable/disable new user registration | `"true"` | No |
 | `JWT_SECRET` | Secret for JWT token signing | - | Yes |
 | `ENCRYPTION_KEY` | Key for encrypting TOTP secrets (must be 32 chars) | - | Yes |
 | `POSTGRES_PASSWORD` | Database password | - | Yes |
 | `DATABASE_URL` | PostgreSQL connection string | - | Yes |
+| `RP_NAME` | WebAuthn relying party name | `"TOTP Sync"` | No |
+| `RP_ID` | WebAuthn relying party ID (your domain) | `"localhost"` | No |
+| `ORIGIN` | WebAuthn origin (full URL with protocol) | `"http://localhost:5173"` | No |
+
+### WebAuthn Configuration
+
+For passwordless authentication to work properly:
+
+**Local Development:**
+```env
+RP_ID="localhost"
+ORIGIN="http://localhost:5173"
+```
+
+**Production:**
+```env
+RP_ID="yourdomain.com"
+ORIGIN="https://yourdomain.com"
+```
+
+**Important:**
+- `RP_ID` must match your domain (without protocol or port)
+- `ORIGIN` must be the full URL users access
+- HTTPS is required in production (localhost works with HTTP)
+- Create `.well-known/webauthn` file for domain verification
 
 ### Ports
 
@@ -239,25 +288,42 @@ REQUIRE_2FA_ON_REGISTER: "false"
 ```
 Users can enable 2FA later in Settings.
 
+### Controlling User Registration
+
+**Open Registration (default):**
+```yaml
+ALLOW_REGISTRATION: "true"
+```
+Anyone can create a new account.
+
+**Closed Registration:**
+```yaml
+ALLOW_REGISTRATION: "false"
+```
+New user registration is disabled. Only existing users can login.
+
 ## 🔒 Security Notes
 
 ⚠️ **Important Security Considerations:**
 
 1. **Always change default passwords** - Generate strong, unique passwords
 2. **Generate new secrets** - Never use example secrets in production
-3. **Use HTTPS in production** - Set up a reverse proxy (Nginx, Caddy, Traefik)
+3. **Use HTTPS in production** - Required for WebAuthn, recommended for all traffic
 4. **Store backup codes safely** - Save them in a secure password manager
 5. **Regular backups** - Back up the PostgreSQL volume regularly
 6. **Keep updated** - Pull latest changes and rebuild regularly
+7. **WebAuthn best practices** - Register multiple authenticators (YubiKey + biometrics)
 
 ### Production Deployment
 
 For production use:
 - Use a reverse proxy with SSL/TLS certificates
+- Configure WebAuthn with your domain
 - Change default ports
 - Use Docker secrets for sensitive values
 - Set up monitoring and logging
 - Regular security updates
+- Consider disabling registration after initial setup
 
 ## 🔐 2FA Features
 
@@ -271,10 +337,22 @@ For production use:
 - Automatically prompted for 2FA code when enabled
 - Use backup codes if authenticator unavailable
 
+### Login with WebAuthn/Passkeys
+- **Platform authenticators:** Touch ID, Face ID, Windows Hello
+- **Roaming authenticators:** YubiKey, Google Titan, USB keys
+- **Cross-device:** Scan QR code with phone to login from desktop
+- **No passwords needed:** Completely passwordless authentication
+
 ### Managing 2FA
 - Enable/disable 2FA in Settings
 - Generate new backup codes
 - Requires password + current 2FA code to disable
+
+### Managing Security Keys
+- Add multiple authenticators (YubiKey, Touch ID, phone)
+- Name your keys for easy identification
+- Remove keys you no longer use
+- See last used date for each key
 
 ## 📱 Import/Export
 
@@ -313,6 +391,21 @@ docker compose ps
 2. If no backup codes, you'll need to reset the database
 3. Always save backup codes in a safe place!
 
+### WebAuthn not working
+
+1. **Check HTTPS:** WebAuthn requires HTTPS (except localhost)
+2. **Verify RP_ID:** Must match your domain exactly
+3. **Check browser support:** Use Chrome, Firefox, Safari, or Edge (latest versions)
+4. **Clear browser data:** Sometimes cached credentials cause issues
+5. **Check .well-known/webauthn:** File must be accessible and return JSON
+
+### Security key not recognized
+
+1. Ensure key is FIDO2/WebAuthn compatible
+2. Try a different USB port
+3. Update key firmware if available
+4. Check browser permissions
+
 ### Clear cache issues
 
 1. Clear browser cache and localStorage
@@ -336,6 +429,8 @@ totp-sync/
 │   │   ├── pages/      # Page views
 │   │   ├── services/   # API client
 │   │   └── store/      # State management
+│   ├── public/
+│   │   └── .well-known/webauthn  # WebAuthn domain verification
 │   └── Dockerfile
 └── docker-compose.yml
 ```
@@ -355,7 +450,26 @@ npm run dev
 
 ## 📝 Changelog
 
-### v0.3.0-beta (Latest)
+### v0.5.0-beta (Latest)
+- ✨ **WebAuthn/Passkey support** - Passwordless login with biometrics and security keys
+- ✨ **Cross-device authentication** - Scan QR code with phone to login from desktop
+- ✨ **Security key management** - Add/remove YubiKey, Touch ID, Windows Hello in Settings
+- ✨ **Registration control** - `ALLOW_REGISTRATION` environment variable
+- 🔒 **Enhanced security** - FIDO2/WebAuthn standard support
+- 📱 **Platform authenticators** - Touch ID, Face ID, Windows Hello, Android biometrics
+- 🔑 **Roaming authenticators** - YubiKey, Google Titan, USB security keys
+- 🌐 **.well-known/webauthn** - Domain verification support
+- 📚 **Updated documentation** - WebAuthn setup guide and troubleshooting
+
+### v0.4.0-beta
+- 🔒 **Security upgrade** - Migrated to Node.js native crypto module
+- 🔐 **AES-256-GCM encryption** - Upgraded from AES-256-CBC with authentication
+- 🗄️ **SQLite support** - Choose between PostgreSQL and SQLite
+- 🐳 **Node.js 20** - Updated runtime for better performance
+- ✅ **Zero vulnerabilities** - Clean npm security audit
+- ⚠️ **Breaking change** - Encryption system overhaul (migration required)
+
+### v0.3.0-beta
 - ✅ **Added search functionality** - Live filtering by account name and issuer
 - ✅ **Expandable search bar** - Smooth animations with auto-focus
 - ✅ **Result counter** - Shows "X of Y" matches when searching
@@ -372,6 +486,22 @@ npm run dev
 - Initial release
 - Basic TOTP generation
 - Docker setup
+
+## 🎯 Roadmap
+
+### v1.0.0 (Planned)
+- 📱 **Mobile app** - Native iOS and Android applications
+- 🔄 **Push notifications** - Real-time sync alerts
+- 🌍 **Multi-language support** - Internationalization
+- 📊 **Usage statistics** - Analytics dashboard
+- 🔐 **Advanced security** - Rate limiting, IP whitelisting
+
+### Future Features
+- 📂 **Folders/Categories** - Organize TOTP entries
+- 🏷️ **Tags** - Label and filter entries
+- 🔍 **Advanced search** - Regex and filters
+- 📤 **Auto-backup** - Scheduled exports
+- 🎨 **Themes** - Custom color schemes
 
 ## 📄 License
 
