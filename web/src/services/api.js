@@ -81,5 +81,31 @@ export const syncAPI = {
   push: (entries, deviceId) =>
     api.post('/sync/push', { entries, deviceId }),
 };
+// WebAuthn endpoints
+export const webAuthnAPI = {
+  // Generate registration options (start key registration)
+  registerOptions: () =>
+    api.post('/auth/webauthn/register-options'),
+  
+  // Verify registration response (complete key registration)
+  registerVerify: (credential, name) =>
+    api.post('/auth/webauthn/register-verify', { credential, name }),
+  
+  // Generate authentication options (start key login)
+  loginOptions: (email) =>
+    api.post('/auth/webauthn/login-options', { email }),
+  
+  // Verify authentication response (complete key login)
+  loginVerify: (credential, userId) =>
+    api.post('/auth/webauthn/login-verify', { credential, userId }),
+  
+  // Get user's registered credentials
+  getCredentials: () =>
+    api.get('/auth/webauthn/credentials'),
+  
+  // Delete a credential
+  deleteCredential: (id) =>
+    api.delete(`/auth/webauthn/credentials/${id}`),
+};
 
 export default api;

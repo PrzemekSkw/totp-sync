@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Lock, LogOut, Moon, Sun } from 'lucide-react';
+import { ArrowLeft, Lock, LogOut, Moon, Sun, Key, Trash2, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { startRegistration } from '@simplewebauthn/browser';
 import useStore from '../store/useStore';
-import { authAPI } from '../services/api';
+import { authAPI, webAuthnAPI } from '../services/api';
 import Button from '../components/Button';
 import Input from '../components/Input';
 import TwoFactorSetup from '../components/TwoFactorSetup';
@@ -15,6 +16,14 @@ export default function Settings() {
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [showTwoFactorSetup, setShowTwoFactorSetup] = useState(false);
   const [disabling2FA, setDisabling2FA] = useState(false);
+  
+  // WebAuthn states
+  const [webAuthnCredentials, setWebAuthnCredentials] = useState([]);
+  const [loadingCredentials, setLoadingCredentials] = useState(false);
+  const [registeringKey, setRegisteringKey] = useState(false);
+  const [showKeyNameModal, setShowKeyNameModal] = useState(false);
+  const [keyName, setKeyName] = useState('');
+  const [pendingCredential, setPendingCredential] = useState(null);
   
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -30,7 +39,7 @@ export default function Settings() {
   const [deleteConfirmation, setDeleteConfirmation] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Sprawdź status 2FA
+  // Check 2FA status
   useEffect(() => {
     const check2FAStatus = async () => {
       try {
@@ -46,6 +55,23 @@ export default function Settings() {
     };
     check2FAStatus();
   }, []);
+
+  // Load WebAuthn credentials
+  useEffect(() => {
+    loadWebAuthnCredentials();
+  }, []);
+
+  const loadWebAuthnCredentials = async () => {
+    setLoadingCredentials(true);
+    try {
+      const response = await webAuthnAPI.getCredentials();
+      setWebAuthnCredentials(response.data.credentials || []);
+    } catch (error) {
+      console.error('Failed to load credentials:', error);
+    } finally {
+      setLoadingCredentials(false);
+    }
+  };
 
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
@@ -140,6 +166,72 @@ export default function Settings() {
     }
   };
 
+  // WebAuthn: Register new security key
+  const handleRegisterKey = async () => {
+    setRegisteringKey(true);
+    
+    try {
+      // Get registration options from server
+      const optionsResponse = await webAuthnAPI.registerOptions();
+      const options = optionsResponse.data;
+
+      // Start registration with security key
+      const credential = await startRegistration(options);
+
+      // Store credential and show name modal
+      setPendingCredential(credential);
+      setShowKeyNameModal(true);
+    } catch (error) {
+      console.error('WebAuthn registration error:', error);
+      
+      if (error.name === 'NotAllowedError') {
+        toast.error('Registration was cancelled');
+      } else {
+        toast.error('Failed to register security key');
+      }
+      setRegisteringKey(false);
+    }
+  };
+
+  // Complete registration with name
+  const handleCompleteRegistration = async () => {
+    if (!keyName.trim()) {
+      toast.error('Please enter a name for your security key');
+      return;
+    }
+
+    try {
+      await webAuthnAPI.registerVerify(pendingCredential, keyName.trim());
+      
+      toast.success('Security key registered successfully!');
+      setShowKeyNameModal(false);
+      setKeyName('');
+      setPendingCredential(null);
+      
+      // Reload credentials
+      loadWebAuthnCredentials();
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to complete registration');
+    } finally {
+      setRegisteringKey(false);
+    }
+  };
+
+  // Delete security key
+  const handleDeleteKey = async (id, name) => {
+    if (!confirm(`Are you sure you want to remove "${name}"?`)) {
+      return;
+    }
+
+    try {
+      await webAuthnAPI.deleteCredential(id);
+      toast.success('Security key removed successfully');
+      loadWebAuthnCredentials();
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to remove security key');
+    }
+  };
+
   const handleDeleteAccount = async () => {
     if (!deletePassword || !deleteConfirmation) {
       toast.error('Please fill all required fields');
@@ -156,16 +248,11 @@ export default function Settings() {
     try {
       await authAPI.deleteAccount(deletePassword, deleteTwoFactorCode || undefined);
       
-      // Close modal
       setShowDeleteModal(false);
-      
-      // Show success message
       toast.success('Account deleted successfully');
       
-      // Logout (clears localStorage and state)
       logout();
       
-      // Redirect to login page
       setTimeout(() => {
         navigate('/login', { replace: true });
       }, 500);
@@ -278,6 +365,77 @@ export default function Settings() {
               Change Password
             </Button>
           </form>
+        </div>
+
+        {/* Security Keys (WebAuthn) */}
+        <div className="card">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Security Keys
+            </h2>
+            <Button
+              variant="primary"
+              icon={Plus}
+              onClick={handleRegisterKey}
+              loading={registeringKey}
+              size="sm"
+            >
+              Add Key
+            </Button>
+          </div>
+
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Security keys provide passwordless authentication using biometrics, USB keys, or platform authenticators.
+          </p>
+
+          {loadingCredentials ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Loading keys...</p>
+            </div>
+          ) : webAuthnCredentials.length === 0 ? (
+            <div className="text-center py-8 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+              <Key className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+              <p className="text-gray-600 dark:text-gray-400">No security keys registered</p>
+              <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
+                Add a security key for passwordless login
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {webAuthnCredentials.map((credential) => (
+                <div
+                  key={credential.id}
+                  className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+                      <Key className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-white">
+                        {credential.name}
+                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Added {new Date(credential.created_at).toLocaleDateString()}
+                        {credential.last_used_at && (
+                          <> · Last used {new Date(credential.last_used_at).toLocaleDateString()}</>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    icon={Trash2}
+                    onClick={() => handleDeleteKey(credential.id, credential.name)}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Two-Factor Authentication */}
@@ -431,6 +589,65 @@ export default function Settings() {
           </div>
         </div>
       </main>
+
+      {/* Key Name Modal */}
+      {showKeyNameModal && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => {
+            setShowKeyNameModal(false);
+            setKeyName('');
+            setPendingCredential(null);
+            setRegisteringKey(false);
+          }}
+        >
+          <div 
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+              Name Your Security Key
+            </h2>
+            
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              Give your security key a memorable name to identify it later.
+            </p>
+
+            <Input
+              label="Key Name"
+              type="text"
+              value={keyName}
+              onChange={(e) => setKeyName(e.target.value)}
+              placeholder="e.g., YubiKey, iPhone, Laptop"
+              icon={Key}
+              autoFocus
+            />
+
+            <div className="flex gap-3 mt-6">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowKeyNameModal(false);
+                  setKeyName('');
+                  setPendingCredential(null);
+                  setRegisteringKey(false);
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleCompleteRegistration}
+                disabled={!keyName.trim()}
+                className="flex-1"
+              >
+                Save Key
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Account Modal */}
       {showDeleteModal && (

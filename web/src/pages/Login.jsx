@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock } from 'lucide-react';
+import { Mail, Lock, Key } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { startAuthentication } from '@simplewebauthn/browser';
 import useStore from '../store/useStore';
+import { webAuthnAPI } from '../services/api';
 import Button from '../components/Button';
 import Input from '../components/Input';
 
@@ -16,6 +18,7 @@ export default function Login() {
     totpCode: '',
   });
   const [loading, setLoading] = useState(false);
+  const [webAuthnLoading, setWebAuthnLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [rememberMe, setRememberMe] = useState(!!localStorage.getItem('rememberedEmail'));
   const [requires2FA, setRequires2FA] = useState(false);
@@ -23,7 +26,7 @@ export default function Login() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Wyczyść błąd dla tego pola
+    // Clear error for this field
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
     }
@@ -42,11 +45,11 @@ export default function Login() {
       newErrors.password = 'Password is required';
     }
     
-    // Walidacja 2FA tylko jeśli pole jest widoczne
+    // Validation for 2FA - accept 6 digits (TOTP) or 8 characters (backup code)
     if (requires2FA && !formData.totpCode) {
       newErrors.totpCode = '2FA code is required';
-    } else if (requires2FA && formData.totpCode.length !== 6) {
-      newErrors.totpCode = '2FA code must be 6 digits';
+    } else if (requires2FA && formData.totpCode.length !== 6 && formData.totpCode.length !== 8) {
+      newErrors.totpCode = '2FA code must be 6 digits or 8-character backup code';
     }
     
     return newErrors;
@@ -66,16 +69,15 @@ export default function Login() {
     try {
       const result = await login(formData.email, formData.password, formData.totpCode);
       
-      // ✅ Sprawdź czy backend wymaga 2FA
+      // Check if backend requires 2FA
       if (result.requires2FA) {
         setRequires2FA(true);
         setLoading(false);
-        // Nie pokazuj toasta - pole 2FA pojawi się automatycznie
         return;
       }
       
       if (result.success) {
-        // Zapamiętaj email jeśli checkbox zaznaczony
+        // Remember email if checkbox is checked
         if (rememberMe) {
           localStorage.setItem('rememberedEmail', formData.email);
         } else {
@@ -85,7 +87,6 @@ export default function Login() {
         toast.success('Logged in successfully!');
         navigate('/');
       } else {
-        // Toast tylko przy faktycznym błędzie
         toast.error(result.error || 'Login failed');
       }
     } catch (error) {
@@ -93,6 +94,63 @@ export default function Login() {
       console.error('Login error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // WebAuthn login handler
+  const handleWebAuthnLogin = async () => {
+    if (!formData.email) {
+      setErrors({ email: 'Email is required for security key login' });
+      return;
+    }
+
+    setWebAuthnLoading(true);
+    
+    try {
+      // Get authentication options from server
+      const optionsResponse = await webAuthnAPI.loginOptions(formData.email);
+      const { userId, ...options } = optionsResponse.data;
+
+      // Start authentication with security key
+      const credential = await startAuthentication(options);
+
+      // Verify authentication with server
+      const verifyResponse = await webAuthnAPI.loginVerify(credential, userId);
+
+      if (verifyResponse.data.success) {
+        // Store token and user data
+        const { token, user } = verifyResponse.data;
+        localStorage.setItem('token', token);
+        
+        // Update store
+        useStore.setState({ 
+          token, 
+          user, 
+          isAuthenticated: true 
+        });
+
+        // Remember email if checkbox is checked
+        if (rememberMe) {
+          localStorage.setItem('rememberedEmail', formData.email);
+        } else {
+          localStorage.removeItem('rememberedEmail');
+        }
+
+        toast.success('Logged in with security key!');
+        navigate('/');
+      }
+    } catch (error) {
+      console.error('WebAuthn login error:', error);
+      
+      if (error.name === 'NotAllowedError') {
+        toast.error('Authentication was cancelled');
+      } else if (error.response?.data?.error) {
+        toast.error(error.response.data.error);
+      } else {
+        toast.error('Failed to authenticate with security key');
+      }
+    } finally {
+      setWebAuthnLoading(false);
     }
   };
 
@@ -145,24 +203,24 @@ export default function Login() {
               disabled={requires2FA}
             />
 
-            {/* 2FA Code Field - pokazuje się tylko gdy requires2FA = true */}
+            {/* 2FA Code Field - shows only when requires2FA = true */}
             {requires2FA && (
               <Input
                 label="Two-Factor Code"
                 type="text"
                 name="totpCode"
-                placeholder="000000"
+                placeholder="123456 or ABCD1234"
                 value={formData.totpCode}
                 onChange={handleChange}
                 error={errors.totpCode}
                 icon={Lock}
                 autoComplete="one-time-code"
-                maxLength={6}
+                maxLength={8}
                 autoFocus
               />
             )}
 
-            {/* Remember Me - ukryj gdy wymaga 2FA */}
+            {/* Remember Me - hide when requires 2FA */}
             {!requires2FA && (
               <div className="flex items-center">
                 <input
@@ -187,7 +245,7 @@ export default function Login() {
               {requires2FA ? 'Verify 2FA Code' : 'Sign In'}
             </Button>
 
-            {/* Przycisk "Back" gdy wymaga 2FA */}
+            {/* Back button when requires 2FA */}
             {requires2FA && (
               <Button
                 type="button"
@@ -203,7 +261,34 @@ export default function Login() {
             )}
           </form>
 
-          {/* Register Link - ukryj gdy wymaga 2FA */}
+          {/* WebAuthn Login - show only when NOT requiring 2FA */}
+          {!requires2FA && (
+            <>
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                    Or continue with
+                  </span>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="secondary"
+                icon={Key}
+                loading={webAuthnLoading}
+                onClick={handleWebAuthnLogin}
+                className="w-full"
+              >
+                Sign in with Security Key
+              </Button>
+            </>
+          )}
+
+          {/* Register Link - hide when requires 2FA */}
           {!requires2FA && (
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600 dark:text-gray-400">

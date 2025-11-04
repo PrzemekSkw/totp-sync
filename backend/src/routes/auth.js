@@ -1,3 +1,4 @@
+const ALLOW_REGISTRATION = process.env.ALLOW_REGISTRATION !== 'false'; // default: true
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { authenticator } = require('otplib');
@@ -7,11 +8,17 @@ const { generateToken, authenticateToken, refreshToken } = require('../middlewar
 const db = require('../services/database');
 
 const router = express.Router();
+const {
+  generateRegistrationOptions,
+  verifyRegistrationResponse,
+  generateAuthenticationOptions,
+  verifyAuthenticationResponse,
+} = require('@simplewebauthn/server');
 
-// Sprawdź czy 2FA jest wymagane przy rejestracji
+// Check if 2FA is required during registration
 const REQUIRE_2FA_ON_REGISTER = process.env.REQUIRE_2FA_ON_REGISTER === 'true';
 
-// Generuj backup kody
+// Generate backup codes
 const generateBackupCodes = () => {
   const codes = [];
   for (let i = 0; i < 10; i++) {
@@ -20,7 +27,21 @@ const generateBackupCodes = () => {
   return codes;
 };
 
-// Walidacja
+// Helper: Parse backup codes (SQLite returns JSON string, PostgreSQL array)
+const parseBackupCodes = (backupCodes) => {
+  if (!backupCodes) return [];
+  if (Array.isArray(backupCodes)) return backupCodes;
+  if (typeof backupCodes === 'string') {
+    try {
+      return JSON.parse(backupCodes);
+    } catch (e) {
+      return [];
+    }
+  }
+  return [];
+};
+
+// Validation
 const registerValidation = [
   body('email').isEmail().normalizeEmail(),
   body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
@@ -31,8 +52,12 @@ const loginValidation = [
   body('password').notEmpty()
 ];
 
-// Rejestracja
+// Registration
 router.post('/register', registerValidation, async (req, res) => {
+  // Check if registration is allowed
+  if (!ALLOW_REGISTRATION) {
+    return res.status(403).json({ error: 'Registration is currently disabled' });
+  }
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
@@ -41,7 +66,7 @@ router.post('/register', registerValidation, async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    // Sprawdź czy użytkownik już istnieje
+    // Check if user already exists
     const existingUser = await db.query(
       'SELECT id FROM users WHERE email = $1',
       [email]
@@ -51,24 +76,24 @@ router.post('/register', registerValidation, async (req, res) => {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
-    // ✅ Jeśli 2FA wymagane przy rejestracji
+    // If 2FA required during registration
     if (REQUIRE_2FA_ON_REGISTER) {
-      // Generuj TOTP secret (ale NIE twórz konta jeszcze!)
+      // Generate TOTP secret (but DON'T create account yet!)
       const secret = authenticator.generateSecret();
       const backupCodes = generateBackupCodes();
 
-      // Generuj otpauth URL dla QR kodu
+      // Generate otpauth URL for QR code
       const otpauthUrl = authenticator.keyuri(
         email,
         'TOTP Sync',
         secret
       );
 
-      // Zaszyfruj hasło i secret
+      // Encrypt password and secret
       const passwordHash = await hashPassword(password);
       const encryptedSecret = encryptSecret(secret);
 
-      // ❌ NIE zapisuj w bazie - tylko wyślij dane do frontendu
+      // DON'T save to database - only send data to frontend
       res.status(200).json({
         message: 'Please setup 2FA to complete registration',
         requires2FA: true,
@@ -77,7 +102,7 @@ router.post('/register', registerValidation, async (req, res) => {
           otpauthUrl,
           backupCodes
         },
-        // Dane do przekazania przy weryfikacji
+        // Data to pass during verification
         pendingRegistration: {
           email,
           passwordHash,
@@ -86,7 +111,7 @@ router.post('/register', registerValidation, async (req, res) => {
         }
       });
     } else {
-      // ✅ Standardowa rejestracja bez 2FA
+      // Standard registration without 2FA
       const passwordHash = await hashPassword(password);
 
       const result = await db.query(
@@ -113,7 +138,7 @@ router.post('/register', registerValidation, async (req, res) => {
   }
 });
 
-// ✅ Dokończ rejestrację po weryfikacji 2FA
+// Complete registration after 2FA verification
 router.post('/register/verify-2fa', [
   body('email').isEmail().normalizeEmail(),
   body('password').notEmpty(),
@@ -128,7 +153,7 @@ router.post('/register/verify-2fa', [
   const { email, password, token, pendingData } = req.body;
 
   try {
-    // Sprawdź czy użytkownik już nie istnieje (double check)
+    // Check if user doesn't already exist (double check)
     const existingUser = await db.query(
       'SELECT id FROM users WHERE email = $1',
       [email]
@@ -138,23 +163,23 @@ router.post('/register/verify-2fa', [
       return res.status(400).json({ error: 'Email already registered' });
     }
 
-    // Weryfikuj hasło (upewnij się że to ten sam użytkownik)
+    // Verify password (make sure it's the same user)
     const isPasswordValid = await verifyPassword(password, pendingData.passwordHash);
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Deszyfruj secret
+    // Decrypt secret
     const secret = decryptSecret(pendingData.encryptedSecret);
 
-    // Weryfikuj token 2FA
+    // Verify 2FA token
     const isTokenValid = authenticator.verify({ token, secret });
 
     if (!isTokenValid) {
       return res.status(400).json({ error: 'Invalid 2FA code. Please try again.' });
     }
 
-    // ✅ Token poprawny - TERAZ utwórz konto
+    // Token correct - NOW create account
     const result = await db.query(
       'INSERT INTO users (email, password_hash, totp_secret_encrypted, backup_codes, totp_enabled) VALUES ($1, $2, $3, $4, TRUE) RETURNING id, email, created_at',
       [email, pendingData.passwordHash, pendingData.encryptedSecret, pendingData.backupCodes]
@@ -162,7 +187,7 @@ router.post('/register/verify-2fa', [
 
     const user = result.rows[0];
 
-    // ✅ Daj token JWT
+    // Give JWT token
     const jwtToken = generateToken(user.id, user.email);
 
     res.json({
@@ -180,7 +205,7 @@ router.post('/register/verify-2fa', [
   }
 });
 
-// Logowanie
+// Login
 router.post('/login', loginValidation, async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -190,7 +215,7 @@ router.post('/login', loginValidation, async (req, res) => {
   const { email, password, token: totpToken } = req.body;
 
   try {
-    // Znajdź użytkownika
+    // Find user
     const result = await db.query(
       'SELECT id, email, password_hash, totp_enabled, totp_secret_encrypted, backup_codes, created_at FROM users WHERE email = $1',
       [email]
@@ -202,13 +227,13 @@ router.post('/login', loginValidation, async (req, res) => {
 
     const user = result.rows[0];
 
-    // Weryfikuj hasło
+    // Verify password
     const isValid = await verifyPassword(password, user.password_hash);
     if (!isValid) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    // Jeśli 2FA włączone, wymagaj kodu
+    // If 2FA enabled, require code
     if (user.totp_enabled) {
       if (!totpToken) {
         return res.status(200).json({ 
@@ -217,15 +242,19 @@ router.post('/login', loginValidation, async (req, res) => {
         });
       }
 
-      // Weryfikuj kod TOTP
+      // Verify TOTP code
       const secret = decryptSecret(user.totp_secret_encrypted);
       const isTokenValid = authenticator.verify({ token: totpToken, secret });
 
-      // Jeśli TOTP niepoprawny, sprawdź backup kody
+      // If TOTP incorrect, check backup codes
       if (!isTokenValid) {
-        if (user.backup_codes && user.backup_codes.includes(totpToken)) {
-          // Usuń użyty backup kod
-          const newBackupCodes = user.backup_codes.filter(code => code !== totpToken);
+        // Parse backup codes (SQLite returns JSON string)
+        const backupCodesArray = parseBackupCodes(user.backup_codes);
+        const normalizedToken = totpToken.toUpperCase().trim();
+        
+        if (backupCodesArray.includes(normalizedToken)) {
+          // Remove used backup code
+          const newBackupCodes = backupCodesArray.filter(code => code !== normalizedToken);
           await db.query(
             'UPDATE users SET backup_codes = $1 WHERE id = $2',
             [newBackupCodes, user.id]
@@ -236,7 +265,7 @@ router.post('/login', loginValidation, async (req, res) => {
       }
     }
 
-    // Generuj token
+    // Generate token
     const token = generateToken(user.id, user.email);
 
     res.json({
@@ -255,10 +284,10 @@ router.post('/login', loginValidation, async (req, res) => {
   }
 });
 
-// Odświeżanie tokena
+// Refresh token
 router.post('/refresh', refreshToken);
 
-// Weryfikacja tokena
+// Verify token
 router.get('/verify', authenticateToken, async (req, res) => {
   try {
     const result = await db.query(
@@ -283,7 +312,7 @@ router.get('/verify', authenticateToken, async (req, res) => {
   }
 });
 
-// Zmiana hasła
+// Change password
 router.post('/change-password', authenticateToken, [
   body('currentPassword').notEmpty(),
   body('newPassword').isLength({ min: 8 })
@@ -362,7 +391,7 @@ router.post('/2fa/setup', authenticateToken, async (req, res) => {
   }
 });
 
-// Włącz 2FA
+// Enable 2FA
 router.post('/2fa/enable', authenticateToken, [
   body('token').notEmpty().isLength({ min: 6, max: 6 })
 ], async (req, res) => {
@@ -410,7 +439,7 @@ router.post('/2fa/enable', authenticateToken, [
   }
 });
 
-// Wyłącz 2FA
+// Disable 2FA
 router.post('/2fa/disable', authenticateToken, [
   body('password').notEmpty(),
   body('token').notEmpty()
@@ -462,7 +491,7 @@ router.post('/2fa/disable', authenticateToken, [
   }
 });
 
-// Sprawdź status 2FA
+// Check 2FA status
 router.get('/2fa/status', authenticateToken, async (req, res) => {
   try {
     const result = await db.query(
@@ -526,6 +555,9 @@ router.delete('/account', authenticateToken, async (req, res) => {
 
     // Delete all user's TOTP entries
     await db.query('DELETE FROM totp_entries WHERE user_id = $1', [userId]);
+    
+    // Delete WebAuthn credentials
+    await db.query('DELETE FROM webauthn_credentials WHERE user_id = $1', [userId]);
 
     // Delete user account
     await db.query('DELETE FROM users WHERE id = $1', [userId]);
@@ -538,6 +570,306 @@ router.delete('/account', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Delete account error:', error);
     res.status(500).json({ error: 'Failed to delete account' });
+  }
+});
+
+// ============================================
+// WebAuthn Endpoints
+// ============================================
+
+// Get WebAuthn configuration from environment
+const rpName = process.env.RP_NAME || 'TOTP Sync';
+const rpID = process.env.RP_ID || 'localhost';
+const origin = process.env.ORIGIN || 'http://localhost:5173';
+
+// Helper: Convert base64url to base64 (for credential_id comparison)
+const base64urlToBase64 = (base64url) => {
+  let base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+  while (base64.length % 4) {
+    base64 += '=';
+  }
+  return base64;
+};
+
+// Generate registration options (start key registration)
+router.post('/webauthn/register-options', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const userEmail = req.user.email;
+
+    // Get user's existing credentials
+    const result = await db.query(
+      'SELECT credential_id FROM webauthn_credentials WHERE user_id = $1',
+      [userId]
+    );
+
+    const excludeCredentials = result.rows.map(row => ({
+      id: Buffer.from(row.credential_id, 'base64'),
+      type: 'public-key',
+    }));
+
+    const options = await generateRegistrationOptions({
+      rpName,
+      rpID,
+      userID: new Uint8Array(Buffer.from(userId.toString())),
+      userName: userEmail,
+      attestationType: 'none',
+      excludeCredentials,
+      authenticatorSelection: {
+        residentKey: 'required',  // Required for cross-device passkeys
+        userVerification: 'preferred',
+      },
+      supportedAlgorithmIDs: [-7, -257],  // ES256 and RS256
+    });
+
+    // Store challenge in session (we'll use a simple in-memory store for now)
+    // In production, use Redis or database
+    if (!global.webauthnChallenges) {
+      global.webauthnChallenges = new Map();
+    }
+    global.webauthnChallenges.set(userId, options.challenge);
+
+    res.json(options);
+  } catch (error) {
+    console.error('WebAuthn register options error:', error);
+    res.status(500).json({ error: 'Failed to generate registration options' });
+  }
+});
+
+// Verify registration response (complete key registration)
+router.post('/webauthn/register-verify', authenticateToken, [
+  body('credential').notEmpty(),
+  body('name').optional().isString(),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  try {
+    const userId = req.user.userId;
+    const { credential, name } = req.body;
+
+    // Get stored challenge
+    const expectedChallenge = global.webauthnChallenges?.get(userId);
+    if (!expectedChallenge) {
+      return res.status(400).json({ error: 'Challenge not found or expired' });
+    }
+
+    // Verify registration
+    const verification = await verifyRegistrationResponse({
+      response: credential,
+      expectedChallenge,
+      expectedOrigin: origin,
+      expectedRPID: rpID,
+    });
+
+    if (!verification.verified || !verification.registrationInfo) {
+      return res.status(400).json({ error: 'Verification failed' });
+    }
+
+    const { credentialPublicKey, counter } = verification.registrationInfo;
+
+    // Use credential.id from browser instead of credentialID from verification
+    const credentialIdBase64 = credential.id;
+    const publicKeyBase64 = Buffer.from(credentialPublicKey).toString('base64');
+    const transports = credential.response.transports || null;
+
+    await db.query(
+      'INSERT INTO webauthn_credentials (user_id, credential_id, public_key, counter, name, transports) VALUES ($1, $2, $3, $4, $5, $6)',
+      [userId, credentialIdBase64, publicKeyBase64, counter, name || 'Security Key', transports]
+    );
+
+    // Clear challenge
+    global.webauthnChallenges.delete(userId);
+
+    res.json({ 
+      success: true,
+      message: 'Security key registered successfully' 
+    });
+  } catch (error) {
+    console.error('WebAuthn register verify error:', error);
+    res.status(500).json({ error: 'Failed to verify registration' });
+  }
+});
+
+// Generate authentication options (start key login)
+router.post('/webauthn/login-options', [
+  body('email').isEmail().normalizeEmail(),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  try {
+    const { email } = req.body;
+
+    // Find user
+    const userResult = await db.query(
+      'SELECT id FROM users WHERE email = $1',
+      [email]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userId = userResult.rows[0].id;
+
+    // For cross-device authentication (QR code with phone), 
+    // don't specify allowCredentials - let the device discover passkeys
+    const options = await generateAuthenticationOptions({
+      rpID,
+      userVerification: 'preferred',
+    });
+
+    // Store challenge
+    if (!global.webauthnChallenges) {
+      global.webauthnChallenges = new Map();
+    }
+    global.webauthnChallenges.set(userId, options.challenge);
+
+    res.json({ ...options, userId });
+  } catch (error) {
+    console.error('WebAuthn login options error:', error);
+    res.status(500).json({ error: 'Failed to generate authentication options' });
+  }
+});
+
+// Verify authentication response (complete key login)
+router.post('/webauthn/login-verify', [
+  body('credential').notEmpty(),
+  body('userId').notEmpty(),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  try {
+    const { credential, userId } = req.body;
+
+    // Get stored challenge
+    const expectedChallenge = global.webauthnChallenges?.get(parseInt(userId));
+    if (!expectedChallenge) {
+      return res.status(400).json({ error: 'Challenge not found or expired' });
+    }
+
+    // credential.id comes from browser in base64url format
+    // Convert to standard base64 for database lookup
+    const credentialIdBase64 = credential.id;
+
+    const credResult = await db.query(
+      'SELECT user_id, public_key, counter, transports FROM webauthn_credentials WHERE credential_id = $1',
+      [credentialIdBase64]
+    );
+
+    if (credResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Credential not found' });
+    }
+
+    const dbCredential = credResult.rows[0];
+    const publicKey = Buffer.from(dbCredential.public_key, 'base64');
+    const transports = dbCredential.transports ? 
+      (typeof dbCredential.transports === 'string' ? JSON.parse(dbCredential.transports) : dbCredential.transports) : 
+      undefined;
+
+    // Verify authentication
+    const verification = await verifyAuthenticationResponse({
+      response: credential,
+      expectedChallenge,
+      expectedOrigin: origin,
+      expectedRPID: rpID,
+      authenticator: {
+        credentialID: Buffer.from(credentialIdBase64, 'base64'),
+        credentialPublicKey: publicKey,
+        counter: dbCredential.counter,
+        transports,
+      },
+    });
+
+    if (!verification.verified) {
+      return res.status(400).json({ error: 'Verification failed' });
+    }
+
+    // Update counter and last used
+    await db.query(
+      'UPDATE webauthn_credentials SET counter = $1, last_used_at = CURRENT_TIMESTAMP WHERE credential_id = $2',
+      [verification.authenticationInfo.newCounter, credentialIdBase64]
+    );
+
+    // Clear challenge
+    global.webauthnChallenges.delete(parseInt(userId));
+
+    // Get user info
+    const userResult = await db.query(
+      'SELECT id, email, totp_enabled, created_at FROM users WHERE id = $1',
+      [dbCredential.user_id]
+    );
+
+    const user = userResult.rows[0];
+
+    // Generate JWT token
+    const token = generateToken(user.id, user.email);
+
+    res.json({
+      success: true,
+      message: 'Login successful',
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        createdAt: user.created_at,
+        twoFactorEnabled: user.totp_enabled || false,
+      },
+    });
+  } catch (error) {
+    console.error('WebAuthn login verify error:', error);
+    res.status(500).json({ error: 'Failed to verify authentication' });
+  }
+});
+
+// Get user's registered credentials
+router.get('/webauthn/credentials', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const result = await db.query(
+      'SELECT id, name, created_at, last_used_at FROM webauthn_credentials WHERE user_id = $1 ORDER BY created_at DESC',
+      [userId]
+    );
+
+    res.json({ credentials: result.rows });
+  } catch (error) {
+    console.error('Get credentials error:', error);
+    res.status(500).json({ error: 'Failed to get credentials' });
+  }
+});
+
+// Delete a credential
+router.delete('/webauthn/credentials/:id', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const credentialId = req.params.id;
+
+    // Verify the credential belongs to the user
+    const result = await db.query(
+      'DELETE FROM webauthn_credentials WHERE id = $1 AND user_id = $2',
+      [credentialId, userId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Credential not found' });
+    }
+
+    res.json({ 
+      success: true,
+      message: 'Security key removed successfully' 
+    });
+  } catch (error) {
+    console.error('Delete credential error:', error);
+    res.status(500).json({ error: 'Failed to delete credential' });
   }
 });
 

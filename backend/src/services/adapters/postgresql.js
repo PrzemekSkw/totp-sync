@@ -7,7 +7,7 @@ const pool = new Pool({
   connectionTimeoutMillis: 2000,
 });
 
-// Test połączenia
+// Test connection
 pool.on('connect', () => {
   console.log('✅ Database connected (PostgreSQL)');
 });
@@ -17,13 +17,13 @@ pool.on('error', (err) => {
   process.exit(-1);
 });
 
-// Inicjalizacja tabel
+// Initialize tables
 const initDatabase = async () => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    // Tabela użytkowników
+    // Users table
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -37,7 +37,7 @@ const initDatabase = async () => {
       )
     `);
 
-    // Tabela wpisów TOTP
+    // TOTP entries table
     await client.query(`
       CREATE TABLE IF NOT EXISTS totp_entries (
         id SERIAL PRIMARY KEY,
@@ -57,13 +57,13 @@ const initDatabase = async () => {
       )
     `);
 
-    // Indeksy
+    // Indexes
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_totp_user_id ON totp_entries(user_id);
       CREATE INDEX IF NOT EXISTS idx_totp_deleted ON totp_entries(deleted_at);
     `);
 
-    // Tabela synchronizacji
+    // Sync log table
     await client.query(`
       CREATE TABLE IF NOT EXISTS sync_log (
         id SERIAL PRIMARY KEY,
@@ -72,6 +72,27 @@ const initDatabase = async () => {
         sync_type VARCHAR(50) NOT NULL,
         synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
+    `);
+
+    // WebAuthn credentials table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS webauthn_credentials (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        credential_id TEXT UNIQUE NOT NULL,
+        public_key TEXT NOT NULL,
+        counter INTEGER DEFAULT 0,
+        name VARCHAR(255),
+        transports TEXT[],
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_used_at TIMESTAMP
+      )
+    `);
+
+    // Indexes for WebAuthn credentials
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_webauthn_user_id ON webauthn_credentials(user_id);
+      CREATE INDEX IF NOT EXISTS idx_webauthn_credential_id ON webauthn_credentials(credential_id);
     `);
 
     await client.query('COMMIT');

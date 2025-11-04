@@ -1,4 +1,4 @@
-FROM node:18
+FROM node:20
 
 # Zainstaluj sqlite3 dla Debian
 RUN apt-get update && \
