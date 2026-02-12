@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@simplewebauthn/browser": "^10.0.0",
-    "axios": "^1.6.2",
+    "axios": "^1.13.5",
     "lucide-react": "^0.294.0",
     "otplib": "^12.0.1",
     "qrcode": "^1.5.4",
